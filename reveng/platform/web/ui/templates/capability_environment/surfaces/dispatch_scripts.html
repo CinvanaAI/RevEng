@@ -1,0 +1,83 @@
+<script>
+  (() => {
+    const feedback = document.getElementById("dispatch-feedback");
+    const errorBox = document.getElementById("dispatch-error");
+
+    function clearMessages() {
+      if (feedback) {
+        feedback.textContent = "";
+      }
+      if (errorBox) {
+        errorBox.hidden = true;
+        errorBox.textContent = "";
+      }
+    }
+
+    function showError(message) {
+      if (!errorBox) return;
+      errorBox.hidden = false;
+      errorBox.textContent = message;
+    }
+
+    window.dispatchValidate = async function (draftId) {
+      clearMessages();
+      const response = await fetch(`/api/capability-environment/drafts/${draftId}/validate`, {
+        method: "POST",
+      });
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        showError(error.detail || `Validation failed (${response.status}).`);
+        return;
+      }
+      if (feedback) {
+        feedback.textContent = "Validation completed. Reloading dispatch state...";
+      }
+      window.location.reload();
+    };
+
+    window.dispatchPublish = async function (draftId) {
+      clearMessages();
+      const response = await fetch(`/api/capability-environment/drafts/${draftId}/publish`, {
+        method: "POST",
+      });
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        showError(error.detail || `Publish failed (${response.status}).`);
+        return;
+      }
+      const result = await response.json();
+      if (feedback) {
+        feedback.textContent = `Publish completed. ${result.replaced_live_count || 0} live capability record(s) replaced and ${result.installed_live_count || 0} newly installed. Reloading dispatch state...`;
+      }
+      window.location.reload();
+    };
+
+    window.loadDispatchExport = async function (draftId) {
+      clearMessages();
+      const response = await fetch(`/api/capability-environment/drafts/${draftId}/export`);
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        showError(error.detail || `Export failed (${response.status}).`);
+        return;
+      }
+      const data = await response.json();
+      document.getElementById("dispatch-export-text").textContent = data.snippet || "";
+      document.getElementById("dispatch-export").hidden = false;
+      if (feedback) {
+        feedback.textContent = "Export generated for outward handoff.";
+      }
+    };
+
+    window.copyDispatchExport = function (event) {
+      const text = document.getElementById("dispatch-export-text").textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        const button = event.currentTarget;
+        const original = button.textContent;
+        button.textContent = "Copied";
+        window.setTimeout(() => {
+          button.textContent = original;
+        }, 1200);
+      });
+    };
+  })();
+</script>

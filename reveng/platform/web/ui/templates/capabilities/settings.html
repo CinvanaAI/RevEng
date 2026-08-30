@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% set active_nav = "capabilities-settings" %}
+
+{% block title %}Capability Environment Settings - RevEng{% endblock %}
+{% block page_title %}Capability Environment Settings{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:920px;">
+  <div class="card-header">
+    <span class="card-title">Capability Environment Manifestation</span>
+    <span class="badge" style="font-size:.72rem;padding:.2rem .5rem;background:var(--surface-2);color:var(--text-muted);">capabilities settings</span>
+  </div>
+
+  <div class="card-body" style="display:grid;gap:1.5rem;">
+    <div style="color:var(--text-muted);font-size:.95rem;line-height:1.7;">
+      These settings only govern Capability Environment manifestation behavior. Capability Platform
+      now lives in its own main-window workspace and is not gated by these controls. Enable skins
+      to let the Capability Environment entry resolve directly to a selected or random skin. When
+      skins are disabled, the environment opens in its neutral workshop-floor manifestation instead.
+    </div>
+
+    <form method="post" action="/capabilities/settings" id="capabilities-settings-form" style="display:grid;gap:1.25rem;">
+      <label class="form-check" style="align-items:flex-start;">
+        <input
+          id="enable-skins-checkbox"
+          type="checkbox"
+          name="enable_skins"
+          value="1"
+          {% if capability_environment_settings.enable_skins %}checked{% endif %}>
+        <span>
+          <strong>Enable Skins?</strong>
+          <div class="form-hint">When disabled, Capability Environment opens in its neutral floor manifestation. When enabled, it opens the selected skin or Random.</div>
+        </span>
+      </label>
+
+      <div id="skin-selection-field" {% if not capability_environment_settings.enable_skins %}hidden{% endif %}>
+        <label for="selected-skin-select" style="display:block;font-size:.8rem;color:var(--text-muted);margin-bottom:.4rem;">Selected Skin</label>
+        <select
+          id="selected-skin-select"
+          name="selected_skin_id"
+          class="form-control">
+          {% for option in skin_options %}
+          <option
+            value="{{ option.value }}"
+            {% if option.value == capability_environment_settings.selected_skin_id %}selected{% endif %}>
+            {{ option.label }}
+          </option>
+          {% endfor %}
+        </select>
+        <div class="form-hint" style="margin-top:.45rem;">
+          Random chooses a different skin package each time Capability Environment entry opens while skins are enabled.
+        </div>
+      </div>
+
+      <div class="meta-grid">
+        <div class="meta-item">
+          <div class="meta-label">Environment Root</div>
+          <div class="meta-value">{% if capability_environment_settings.enable_skins %}Skin{% else %}Neutral Floor{% endif %}</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">Selected Skin</div>
+          <div class="meta-value">{{ capability_environment_settings.selected_skin_label }}</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">Platform Workspace</div>
+          <div class="meta-value">Independent</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">Updated</div>
+          <div class="meta-value mono">{{ capability_environment_settings.updated_at[:16] }}</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:.75rem;flex-wrap:wrap;">
+        <button type="submit" class="btn btn-primary">Save</button>
+        <a href="/capabilities" class="btn btn-ghost">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  (() => {
+    const checkbox = document.getElementById("enable-skins-checkbox");
+    const skinField = document.getElementById("skin-selection-field");
+    if (!checkbox || !skinField) {
+      return;
+    }
+
+    const syncSkinSelect = () => {
+      skinField.hidden = !checkbox.checked;
+    };
+
+    checkbox.addEventListener("change", syncSkinSelect);
+    syncSkinSelect();
+  })();
+</script>
+{% endblock %}

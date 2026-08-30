@@ -1,0 +1,5 @@
+graft reveng/platform/web/ui/templates
+graft reveng/platform/web/ui/static
+graft reveng/execution_environment/capability_environment/assets
+graft reveng/execution_environment/agent_environment/source_skins
+global-exclude __pycache__ *.py[cod]

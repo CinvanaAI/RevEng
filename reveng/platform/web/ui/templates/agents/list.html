@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% set active_nav = "agents" %}
+
+{% block title %}Agents — RevEng{% endblock %}
+{% block page_title %}Agents{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ agent_environment_settings_path }}" class="btn btn-ghost">Environment Settings</a>
+  <a href="/agents/new" class="btn btn-primary">+ New Agent</a>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">All Agents</span>
+    <span style="color:var(--text-muted);font-size:.8rem;">{{ agent_rows|length }} agent{{ 's' if agent_rows|length != 1 }}</span>
+  </div>
+
+  {% if agent_rows %}
+  <table id="agents-table">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Provider / Model</th>
+        <th>Tool Bindings</th>
+        <th>Status</th>
+        <th>Active</th>
+        <th>Created</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in agent_rows %}
+      {% set agent = row.agent %}
+      {% set tool_ids = row.tool_ids %}
+      {% set provider = providers.get(agent.provider_id) %}
+      <tr id="agent-row-{{ agent.id }}">
+        <td>
+          <a href="/agents/{{ agent.id }}" style="color:var(--text);text-decoration:none;font-weight:500;">
+            {{ agent.name }}
+          </a>
+          {% if agent.description %}
+          <div style="color:var(--text-muted);font-size:.75rem;margin-top:.15rem;">{{ agent.description[:80] }}{% if agent.description|length > 80 %}…{% endif %}</div>
+          {% endif %}
+        </td>
+        <td>
+          <span style="font-size:.8rem;">{{ provider.label if provider else agent.provider_id }}</span>
+          <br><span class="cell-mono" style="font-size:.75rem;">{{ agent.model }}</span>
+        </td>
+        <td>
+          {% if tool_ids %}
+            {% for t in tool_ids[:3] %}
+              <span class="tag">{{ t }}</span>
+            {% endfor %}
+            {% if tool_ids|length > 3 %}
+              <span class="tag">+{{ tool_ids|length - 3 }}</span>
+            {% endif %}
+          {% else %}
+            <span style="color:var(--text-muted);font-size:.75rem;">none</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if agent.is_active %}
+            <span class="badge badge-active">Active</span>
+          {% else %}
+            <span class="badge badge-inactive">Inactive</span>
+          {% endif %}
+        </td>
+        <td>
+          <label class="toggle"
+                 title="{{ 'Deactivate' if agent.is_active else 'Activate' }} agent">
+            <input type="checkbox"
+                   {% if agent.is_active %}checked{% endif %}
+                   onchange="toggleAgent('{{ agent.id }}', this.checked)">
+            <span class="toggle-track"></span>
+            <span class="toggle-thumb"></span>
+          </label>
+        </td>
+        <td class="cell-mono" style="font-size:.72rem;">{{ agent.created_at[:10] }}</td>
+        <td>
+          <div style="display:flex;gap:.5rem;">
+            <a href="/agents/{{ agent.id }}" class="btn btn-ghost btn-sm">Inspect</a>
+            <a href="/agents/{{ agent.id }}/edit" class="btn btn-ghost btn-sm">Edit</a>
+            <form method="post" action="/agents/{{ agent.id }}/delete"
+                  onsubmit="return confirm('Delete agent {{ agent.name }}?');"
+                  style="display:inline;">
+              <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+            </form>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state">
+    <p>No agents yet.</p>
+    <a href="/agents/new" class="btn btn-primary">Create your first agent</a>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+function toggleAgent(agentId, makeActive) {
+  fetch('/api/agents/' + agentId + '/active', {
+    method: 'PATCH',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({active: makeActive})
+  }).then(function(r) {
+    if (r.ok) { window.location.reload(); }
+    else {
+      alert('Failed to update agent status.');
+      window.location.reload(); // reload to restore checkbox to real state
+    }
+  });
+}
+</script>
+{% endblock %}

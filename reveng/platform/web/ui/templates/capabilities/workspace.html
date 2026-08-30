@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+
+{% block title %}Capability Platform Workspace - RevEng{% endblock %}
+{% block page_title %}Capability Platform Workspace{% endblock %}
+
+{% block topbar_actions %}
+  <a href="#create-draft-form" class="btn btn-primary">Create Draft</a>
+  <a href="/agents" class="btn btn-ghost">Control Center</a>
+{% endblock %}
+
+{% block content %}
+{% if page_error %}
+<div class="alert alert-error">{{ page_error }}</div>
+{% endif %}
+{% if page_notice %}
+<div class="alert alert-success">{{ page_notice }}</div>
+{% endif %}
+
+<div class="card" style="margin-bottom:1.5rem;">
+  <div class="card-header">
+    <span class="card-title">Capability Platform</span>
+    <span class="badge" style="font-size:.72rem;padding:.2rem .5rem;background:var(--surface-2);color:var(--text-muted);">main window workspace</span>
+  </div>
+  <div class="card-body" style="display:grid;gap:1rem;">
+    <div style="color:var(--text-muted);font-size:.95rem;line-height:1.7;">
+      This is the direct main-window manifestation of Capability Platform. It exposes real draft truth,
+      live installed capability truth, publication/install history, and stored package objects in one
+      place without routing ordinary platform work through a separate manifestation layer.
+    </div>
+    <div style="display:flex;gap:.75rem;flex-wrap:wrap;align-items:center;">
+      <a href="/capability-environment" class="btn btn-ghost btn-sm">
+        Capability Environment <span style="color:var(--text-muted);font-size:.75rem;margin-left:.25rem;">— coordinate multi-capability changesets</span>
+      </a>
+      <a href="/capabilities/platform" class="btn btn-ghost btn-sm">
+        Platform Admin <span style="color:var(--text-muted);font-size:.75rem;margin-left:.25rem;">— platform mechanics observability</span>
+      </a>
+    </div>
+    <div class="meta-grid" style="margin-bottom:0;">
+      <div class="meta-item">
+        <div class="meta-label">Drafts</div>
+        <div class="meta-value">{{ workspace_stats.draft_count }}</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label">Active Drafts</div>
+        <div class="meta-value">{{ workspace_stats.active_draft_count }}</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label">Published Drafts</div>
+        <div class="meta-value">{{ workspace_stats.published_draft_count }}</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label">Live Installed</div>
+        <div class="meta-value">{{ workspace_stats.installed_count }}</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label">Publication Records</div>
+        <div class="meta-value">{{ workspace_stats.publication_record_count }}</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label">Package Objects</div>
+        <div class="meta-value">{{ workspace_stats.package_object_count }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr .95fr;gap:1.5rem;margin-bottom:1.5rem;">
+  <div class="card" id="create-draft-form">
+    <div class="card-header">
+      <span class="card-title">Create Draft</span>
+      <span style="color:var(--text-muted);font-size:.8rem;">Start a new non-live platform draft</span>
+    </div>
+    <div class="card-body">
+      <form method="post" action="/capabilities/drafts" style="display:grid;gap:1rem;">
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label" for="workspace-draft-name">Draft Name</label>
+          <input id="workspace-draft-name" name="name" class="form-control" placeholder="Filesystem verbs rollout" required>
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label" for="workspace-draft-description">Description</label>
+          <textarea id="workspace-draft-description" name="description" class="form-control" style="min-height:110px;" placeholder="What this draft is intended to change."></textarea>
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label" for="workspace-draft-version">Version</label>
+          <input id="workspace-draft-version" name="version" class="form-control" value="1.0.0">
+        </div>
+        <div class="form-actions" style="margin-top:0;">
+          <button type="submit" class="btn btn-primary">Create Draft</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Unavailable Today</span>
+      <span style="color:var(--text-muted);font-size:.8rem;">Do not fake what the backend does not support</span>
+    </div>
+    <div class="card-body" style="display:grid;gap:1rem;">
+      {% for limitation in platform_limitations %}
+      <div style="border:1px solid var(--border);border-radius:var(--radius);padding:1rem;background:var(--bg-input);">
+        <div style="font-weight:600;margin-bottom:.35rem;">{{ limitation.title }}</div>
+        <div style="color:var(--text-muted);font-size:.86rem;">{{ limitation.detail }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:1.5rem;">
+  <div class="card-header">
+    <span class="card-title">Installed Capabilities</span>
+    <span style="color:var(--text-muted);font-size:.8rem;">Each installed capability is a sovereign package — open it to view live, draft, and history faces</span>
+  </div>
+  {% if live_rows %}
+  <table>
+    <thead>
+      <tr>
+        <th>Capability</th>
+        <th>Type</th>
+        <th>Execution</th>
+        <th>Version</th>
+        <th>Source</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in live_rows %}
+      <tr>
+        <td>
+          <div class="cell-mono">{{ row.capability.capability_id }}</div>
+          <div style="color:var(--text-muted);font-size:.75rem;margin-top:.15rem;">{{ row.capability.display_name }}</div>
+        </td>
+        <td>
+          <span class="badge {% if row.capability.capability_type == 'composite' %}badge-running{% else %}badge-inactive{% endif %}">
+            {{ row.capability.capability_type }}
+          </span>
+        </td>
+        <td class="cell-mono" style="font-size:.78rem;">{{ row.capability.get('execution_source', 'binding_ref') if row.capability is mapping else 'binding_ref' }}</td>
+        <td class="cell-mono">{{ row.capability.version }}</td>
+        <td class="cell-mono">{{ row.capability.source_kind }}</td>
+        <td><a href="{{ row.package_href }}" class="btn btn-ghost btn-sm">Open Package</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state">
+    <p>No installed capabilities are currently visible.</p>
+  </div>
+  {% endif %}
+</div>
+
+<div class="card" style="margin-bottom:1.5rem;">
+  <div class="card-header">
+    <span class="card-title">Coordinated Changeset Drafts</span>
+    <span style="color:var(--text-muted);font-size:.8rem;">Multi-capability batch drafts for coordinated cross-package edits</span>
+  </div>
+  {% if draft_rows %}
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>State</th>
+        <th>Version</th>
+        <th>Items</th>
+        <th>Saved Versions</th>
+        <th>Publications</th>
+        <th>Updated</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in draft_rows %}
+      <tr>
+        <td>
+          <strong>{{ row.draft.name }}</strong>
+          <div style="color:var(--text-muted);font-size:.75rem;margin-top:.15rem;">{{ row.draft.description or "No description recorded." }}</div>
+        </td>
+        <td>{{ row.draft.lifecycle_state }}</td>
+        <td class="cell-mono">{{ row.draft.version }}</td>
+        <td>{{ row.item_count }}</td>
+        <td>{{ row.revision_count }}</td>
+        <td>{{ row.publication_count }}</td>
+        <td class="cell-mono">{{ row.draft.updated_at[:16].replace('T', ' ') }}</td>
+        <td><a href="{{ row.href }}" class="btn btn-ghost btn-sm">Open Draft</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state">
+    <p>No coordinated changeset drafts exist yet. Per-capability edits are handled through each capability's package page.</p>
+  </div>
+  {% endif %}
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">Publication / Install Activity</span>
+    <span style="color:var(--text-muted);font-size:.8rem;">Open the real draft ledger for publication records</span>
+  </div>
+  {% if publication_rows %}
+  <table>
+    <thead>
+      <tr>
+        <th>Draft</th>
+        <th>Version</th>
+        <th>Published</th>
+        <th>Items</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in publication_rows %}
+      <tr>
+        <td>{{ row.draft.name }}</td>
+        <td class="cell-mono">{{ row.record.version }}</td>
+        <td class="cell-mono">{{ row.record.published_at[:16].replace('T', ' ') }}</td>
+        <td>{{ row.record.item_count }}</td>
+        <td><a href="{{ row.href }}" class="btn btn-ghost btn-sm">Open Ledger</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state">
+    <p>No publication/install records exist yet.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

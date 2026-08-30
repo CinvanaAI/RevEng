@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Capability Environment Skin Not Found - RevEng</title>
+  <link rel="stylesheet" href="/static/app.css">
+  <link rel="stylesheet" href="/static/capability_environment_surface.css">
+</head>
+<body class="cap-env-place-body" data-skin-tone="neutral">
+  <div class="cap-env-place-app">
+    <header class="cap-env-place-hud">
+      <a href="/capabilities" class="cap-env-place-exit">
+        <span class="cap-env-place-kicker">Exit</span>
+        <strong>Capabilities</strong>
+      </a>
+
+      <div class="cap-env-place-heading">
+        <span class="cap-env-place-kicker">Capability Environment</span>
+        <h1>Skin Not Found</h1>
+        <p>No Capability Environment skin exists for <code>{{ missing_skin_id }}</code>.</p>
+      </div>
+
+      <div class="cap-env-place-tools">
+        <div class="cap-env-place-tool-actions">
+          <a href="{{ capability_environment_professional_href }}" class="btn btn-sm">Capability Platform</a>
+          <a href="{{ capability_environment_settings_href }}" class="btn btn-sm">Settings</a>
+        </div>
+        <div class="cap-env-place-chip-row">
+          <span class="cap-env-place-chip">
+            <span class="cap-env-place-chip-label">Available Skins</span>
+            <strong>{{ capability_environment_settings.selected_skin_label }}</strong>
+          </span>
+        </div>
+      </div>
+    </header>
+
+    <main class="cap-env-place-main">
+      <section class="cap-env-place-stage-shell">
+        <div class="cap-env-neutral-stage">
+          <div class="cap-env-neutral-grid">
+            <a href="{{ capability_environment_root_href }}" class="cap-env-neutral-node">
+              <span class="cap-env-place-kicker">Environment Root</span>
+              <strong>Open Capability Environment</strong>
+              <span>Resolve into the selected manifestation or neutral workshop floor.</span>
+            </a>
+            <a href="{{ capability_environment_settings_href }}" class="cap-env-neutral-node">
+              <span class="cap-env-place-kicker">Settings</span>
+              <strong>Change Manifestation</strong>
+              <span>Choose a specific skin or keep the environment in neutral mode.</span>
+            </a>
+            <a href="{{ capability_environment_professional_href }}" class="cap-env-neutral-node">
+              <span class="cap-env-place-kicker">Platform</span>
+              <strong>Open Capability Platform</strong>
+              <span>Return to the direct workspace without routing through the environment.</span>
+            </a>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

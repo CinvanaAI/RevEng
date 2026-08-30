@@ -1,0 +1,302 @@
+{% extends "base.html" %}
+
+{% block title %}{{ draft.name }} - Capability Platform - RevEng{% endblock %}
+{% block page_title %}{{ draft.name }}{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ workspace_href }}" class="btn btn-ghost">Back to Workspace</a>
+  <a href="/capabilities" class="btn btn-ghost">Capabilities</a>
+{% endblock %}
+
+{% block content %}
+{% if page_error %}
+<div class="alert alert-error">{{ page_error }}</div>
+{% endif %}
+{% if page_notice %}
+<div class="alert alert-success">{{ page_notice }}</div>
+{% endif %}
+
+<div class="card" style="margin-bottom:1.5rem;">
+  <div class="card-header">
+    <span class="card-title">Draft Overview</span>
+    <span class="badge" style="font-size:.72rem;padding:.2rem .5rem;background:var(--surface-2);color:var(--text-muted);">platform-owned draft truth</span>
+  </div>
+  <div class="card-body" style="display:grid;gap:1rem;">
+    <div style="color:var(--text-muted);font-size:.92rem;line-height:1.7;">
+      This page edits the draft directly through Capability Platform authority. Live installed truth only changes if
+      this draft is published or if a rollback republish is created from stored history.
+    </div>
+    <div class="meta-grid" style="margin-bottom:0;">
+      <div class="meta-item">
+        <div class="meta-label">Draft ID</div>
+        <div class="meta-value mono">{{ draft.id }}</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label">Lifecycle</div>
+        <div class="meta-value">{{ draft.lifecycle_state }}</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label">Version</div>
+        <div class="meta-value mono">{{ draft.version }}</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label">Items</div>
+        <div class="meta-value">{{ draft_item_counts.total }}</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label">Validated</div>
+        <div class="meta-value">{{ draft_item_counts.validated }}</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label">Published</div>
+        <div class="meta-value">{{ draft_item_counts.published }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr .95fr;gap:1.5rem;margin-bottom:1.5rem;">
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Draft Details</span>
+      <span style="color:var(--text-muted);font-size:.8rem;">Edit name and description</span>
+    </div>
+    <div class="card-body">
+      <form method="post" action="/capabilities/drafts/{{ draft.id }}/edit" style="display:grid;gap:1rem;">
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label" for="draft-name">Name</label>
+          <input id="draft-name" name="name" class="form-control" value="{{ draft.name }}" required>
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label" for="draft-description">Description</label>
+          <textarea id="draft-description" name="description" class="form-control" style="min-height:120px;">{{ draft.description }}</textarea>
+        </div>
+        <div class="form-actions" style="margin-top:0;">
+          <button type="submit" class="btn btn-primary">Save Details</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Draft Operations</span>
+      <span style="color:var(--text-muted);font-size:.8rem;">Validate, publish, save versions</span>
+    </div>
+    <div class="card-body" style="display:grid;gap:1rem;">
+      <form method="post" action="/capabilities/drafts/{{ draft.id }}/versions" style="display:grid;gap:.75rem;">
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label" for="save-version">Save New Version</label>
+          <input id="save-version" name="version" class="form-control" placeholder="2.0.0">
+        </div>
+        <button type="submit" class="btn btn-ghost">Save Version</button>
+      </form>
+
+      <div style="display:flex;gap:.75rem;flex-wrap:wrap;">
+        <form method="post" action="/capabilities/drafts/{{ draft.id }}/validate">
+          <button type="submit" class="btn btn-ghost">Validate Draft</button>
+        </form>
+        <form method="post" action="/capabilities/drafts/{{ draft.id }}/publish">
+          <button type="submit" class="btn btn-primary">Publish to Live</button>
+        </form>
+        <form method="post" action="/capabilities/drafts/{{ draft.id }}/delete" onsubmit="return window.confirm('Delete this draft and all draft items?');">
+          <button type="submit" class="btn btn-danger">Delete Draft</button>
+        </form>
+      </div>
+
+      <div style="display:grid;gap:.65rem;">
+        {% for limitation in platform_limitations %}
+        <div style="border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;background:var(--bg-input);color:var(--text-muted);font-size:.82rem;">
+          {{ limitation }}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:1.5rem;">
+  <div class="card-header">
+    <span class="card-title">Draft Items</span>
+    <span style="color:var(--text-muted);font-size:.8rem;">Edit the stored draft objects directly</span>
+  </div>
+  <div class="card-body" style="display:grid;gap:1rem;">
+    {% if draft_items %}
+      {% for row in draft_items %}
+      <section style="border:1px solid var(--border);border-radius:var(--radius);padding:1rem;background:var(--bg-input);">
+        <div style="display:flex;justify-content:space-between;gap:1rem;align-items:flex-start;margin-bottom:1rem;">
+          <div>
+            <div style="font-weight:600;">{{ row.item.planned_capability_id }}</div>
+            <div style="color:var(--text-muted);font-size:.8rem;">State: {{ row.item.item_state }} · Created {{ row.item.created_at[:16].replace('T', ' ') }}</div>
+            {% if row.rollback_source_kind %}
+            <div style="color:var(--text-muted);font-size:.8rem;margin-top:.35rem;">
+              Rollback source: {{ row.rollback_source_kind }} · {{ row.rollback_source_id }} · {{ row.rollback_source_version }}
+            </div>
+            {% endif %}
+          </div>
+          {% if row.item.planned_capability_id %}
+          <a href="/capabilities/live/{{ row.item.planned_capability_id }}" class="btn btn-ghost btn-sm">Inspect Live</a>
+          {% endif %}
+        </div>
+
+        <form method="post" action="/capabilities/drafts/{{ draft.id }}/items/{{ row.item.id }}" style="display:grid;gap:.75rem;">
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label" for="planned-capability-{{ row.item.id }}">Planned Capability ID</label>
+            <input id="planned-capability-{{ row.item.id }}" name="planned_capability_id" class="form-control" value="{{ row.item.planned_capability_id }}" required>
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label" for="draft-data-{{ row.item.id }}">Draft Data JSON</label>
+            <textarea id="draft-data-{{ row.item.id }}" name="draft_data_json" class="form-control" style="min-height:300px;">{{ row.draft_data_json }}</textarea>
+            <div class="form-hint">Edit the stored draft object directly. The platform validates this JSON during validate/publish.</div>
+          </div>
+          <div style="display:flex;gap:.75rem;flex-wrap:wrap;">
+            <button type="submit" class="btn btn-primary">Save Item</button>
+          </div>
+        </form>
+        <form method="post" action="/capabilities/drafts/{{ draft.id }}/items/{{ row.item.id }}/delete" onsubmit="return window.confirm('Remove this draft item?');" style="margin-top:.75rem;">
+          <button type="submit" class="btn btn-danger btn-sm">Remove Item</button>
+        </form>
+      </section>
+      {% endfor %}
+    {% else %}
+    <div class="empty-state" style="padding:1rem 0;">
+      <p>No draft items exist yet.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:1.5rem;">
+  <div class="card-header">
+    <span class="card-title">Add Draft Item</span>
+    <span style="color:var(--text-muted);font-size:.8rem;">Create a new stored draft object in this draft</span>
+  </div>
+  <div class="card-body">
+    <form method="post" action="/capabilities/drafts/{{ draft.id }}/items" style="display:grid;gap:1rem;">
+      <div class="form-group" style="margin-bottom:0;">
+        <label class="form-label" for="new-planned-capability-id">Planned Capability ID</label>
+        <input id="new-planned-capability-id" name="planned_capability_id" class="form-control" placeholder="filesystem.create_file" required>
+      </div>
+      <div class="form-group" style="margin-bottom:0;">
+        <label class="form-label" for="new-draft-data-json">Draft Data JSON</label>
+        <textarea id="new-draft-data-json" name="draft_data_json" class="form-control" style="min-height:300px;">{{ new_item_template_json }}</textarea>
+      </div>
+      <div class="form-actions" style="margin-top:0;">
+        <button type="submit" class="btn btn-primary">Add Draft Item</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card" id="ledger-history" style="margin-bottom:1.5rem;">
+  <div class="card-header">
+    <span class="card-title">Ledger / History</span>
+    <span style="color:var(--text-muted);font-size:.8rem;">Saved revisions, publication records, and lawful rollback</span>
+  </div>
+  <div class="card-body" style="display:grid;gap:1.5rem;">
+    <section>
+      <div style="font-size:.8rem;color:var(--text-muted);margin-bottom:.5rem;">Saved Versions</div>
+      {% if revision_records %}
+      <table>
+        <thead>
+          <tr>
+            <th>Version</th>
+            <th>Saved</th>
+            <th>Items</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for revision in revision_records %}
+          <tr>
+            <td class="cell-mono">{{ revision.version }}</td>
+            <td class="cell-mono">{{ revision.saved_at[:16].replace('T', ' ') }}</td>
+            <td>{{ revision.item_count }}</td>
+            <td>
+              <form method="post" action="/capabilities/drafts/{{ draft.id }}/rollback/revisions/{{ revision.id }}" onsubmit="return window.confirm('Restore live truth by republishing this saved revision?');">
+                <button type="submit" class="btn btn-ghost btn-sm">Restore Live</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div style="color:var(--text-muted);font-size:.85rem;">No saved revisions recorded yet.</div>
+      {% endif %}
+    </section>
+
+    <section>
+      <div style="font-size:.8rem;color:var(--text-muted);margin-bottom:.5rem;">Publication History</div>
+      {% if publication_records %}
+      <table>
+        <thead>
+          <tr>
+            <th>Version</th>
+            <th>Published</th>
+            <th>Items</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for record in publication_records %}
+          <tr>
+            <td class="cell-mono">{{ record.version }}</td>
+            <td class="cell-mono">{{ record.published_at[:16].replace('T', ' ') }}</td>
+            <td>{{ record.item_count }}</td>
+            <td>
+              <form method="post" action="/capabilities/drafts/{{ draft.id }}/rollback/publications/{{ record.id }}" onsubmit="return window.confirm('Republish this historical publication record back into live truth?');">
+                <button type="submit" class="btn btn-ghost btn-sm">Republish Live</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div style="color:var(--text-muted);font-size:.85rem;">No publication records recorded yet.</div>
+      {% endif %}
+    </section>
+
+    <section>
+      <div style="font-size:.8rem;color:var(--text-muted);margin-bottom:.5rem;">Publication Candidates</div>
+      {% if publication_candidates %}
+      <table>
+        <thead>
+          <tr>
+            <th>Capability</th>
+            <th>Version</th>
+            <th>State</th>
+            <th>Executable</th>
+            <th>Recorded</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for candidate in publication_candidates %}
+          <tr>
+            <td class="cell-mono">{{ candidate.capability_id }}</td>
+            <td class="cell-mono">{{ candidate.version }}</td>
+            <td>{{ candidate.publication_state }}</td>
+            <td>{{ "ready" if candidate.executable_ready else "not ready" }}</td>
+            <td class="cell-mono">{{ candidate.created_at[:16].replace('T', ' ') }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div style="color:var(--text-muted);font-size:.85rem;">No publication candidate records exist yet.</div>
+      {% endif %}
+    </section>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">Export Snippet</span>
+    <span style="color:var(--text-muted);font-size:.8rem;">Current pack snippet generated from validated or published items</span>
+  </div>
+  <div class="card-body">
+    <pre style="margin:0;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;white-space:pre-wrap;line-height:1.6;">{{ export_snippet }}</pre>
+  </div>
+</div>
+{% endblock %}

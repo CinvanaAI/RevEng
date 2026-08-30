@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% set active_nav = "providers" %}
+
+{% block title %}Providers — RevEng{% endblock %}
+{% block page_title %}Providers{% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom:1.5rem;">
+  <div class="card-header">
+    <span class="card-title">Configured Providers</span>
+  </div>
+
+  {% if providers %}
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Kind</th>
+        <th>Label</th>
+        <th>Base URL</th>
+        <th>API Key Env</th>
+        <th>Default</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in providers %}
+      <tr>
+        <td class="cell-mono">{{ p.id }}</td>
+        <td><span class="tag">{{ p.kind }}</span></td>
+        <td>{{ p.label }}</td>
+        <td class="cell-mono" style="font-size:.75rem;">{{ p.base_url }}</td>
+        <td class="cell-mono" style="font-size:.75rem;">
+          {{ p.api_key_env if p.api_key_env else '—' }}
+        </td>
+        <td>
+          {% if p.is_default %}
+            <span class="badge badge-active" style="font-size:.7rem;">Default</span>
+          {% else %}
+            <span style="color:var(--text-muted);">—</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state">
+    <p>No providers configured.</p>
+    <p>Add credentials to your <code style="font-family:var(--font-mono);color:var(--accent);">.env</code> file and restart the server.</p>
+  </div>
+  {% endif %}
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">Configuration</span>
+  </div>
+  <div class="card-body" style="font-size:.875rem;line-height:1.8;">
+    <p style="color:var(--text-muted);margin-bottom:1rem;">
+      Provider records are seeded automatically from your <code style="font-family:var(--font-mono);color:var(--accent);">.env</code>
+      file at server startup. Platform-triggered AI runs resolve providers from these records; agent-linked runs use the
+      agent's configured provider and model.
+    </p>
+    <table style="width:auto;font-size:.82rem;">
+      <thead>
+        <tr>
+          <th style="padding:.4rem .75rem;">Env Variable</th>
+          <th style="padding:.4rem .75rem;">Required for</th>
+          <th style="padding:.4rem .75rem;">Example</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="cell-mono" style="padding:.4rem .75rem;">OPENAI_API_KEY</td>
+          <td style="padding:.4rem .75rem;">OpenAI provider</td>
+          <td class="cell-mono" style="padding:.4rem .75rem;">sk-proj-…</td>
+        </tr>
+        <tr>
+          <td class="cell-mono" style="padding:.4rem .75rem;">OPENAI_BASE_URL</td>
+          <td style="padding:.4rem .75rem;">OpenAI (override endpoint)</td>
+          <td class="cell-mono" style="padding:.4rem .75rem;">https://api.openai.com/v1</td>
+        </tr>
+        <tr>
+          <td class="cell-mono" style="padding:.4rem .75rem;">OPENAI_MODEL</td>
+          <td style="padding:.4rem .75rem;">Default model</td>
+          <td class="cell-mono" style="padding:.4rem .75rem;">gpt-4o-mini</td>
+        </tr>
+        <tr>
+          <td class="cell-mono" style="padding:.4rem .75rem;">OLLAMA_BASE_URL</td>
+          <td style="padding:.4rem .75rem;">Ollama provider</td>
+          <td class="cell-mono" style="padding:.4rem .75rem;">http://localhost:11434/v1</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

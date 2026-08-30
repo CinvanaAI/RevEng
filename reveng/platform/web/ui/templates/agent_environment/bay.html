@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ selected_agent.name }} Chamber - Agent Environment - RevEng</title>
+  <link rel="stylesheet" href="/static/app.css">
+  <link rel="stylesheet" href="/static/agent_environment.css">
+</head>
+<body class="agent-env-place-body">
+  <div class="agent-env-place-app">
+    <header class="agent-env-place-hud">
+      <a href="/agent-environment" class="agent-env-place-exit">
+        <span class="agent-env-kicker">Exit</span>
+        <strong>Agent Environment</strong>
+      </a>
+      <div class="agent-env-place-heading">
+        <span class="agent-env-kicker">Agent Environment</span>
+        <h1>{{ selected_agent.name }} Chamber</h1>
+        <p>Tool grants, Keycard visibility, and per-file permissions live in this deeper agent space. The front hall only stages and enters the chamber.</p>
+      </div>
+      <div class="agent-env-place-actions">
+        <a href="{{ back_to_hall_href }}" class="btn btn-sm">Back to Hall</a>
+        <a href="{{ inspect_agent_href }}" class="btn btn-sm">Inspect Agent</a>
+        <a href="/agents" class="btn btn-sm">Agents Admin</a>
+      </div>
+    </header>
+
+    {% if page_notice or page_error %}
+    <div class="agent-env-place-flash {% if page_error %}is-error{% else %}is-notice{% endif %}">
+      {{ page_error or page_notice }}
+    </div>
+    {% endif %}
+
+    <div class="agent-env-place-chip-row">
+      <span class="agent-env-place-chip"><span class="agent-env-place-chip-label">Agents</span><strong>{{ agent_environment_stats.total_agents }}</strong></span>
+      <span class="agent-env-place-chip"><span class="agent-env-place-chip-label">Active</span><strong>{{ agent_environment_stats.active_agents }}</strong></span>
+      <span class="agent-env-place-chip"><span class="agent-env-place-chip-label">Installed Packages</span><strong>{{ agent_environment_stats.installed_capability_count }}</strong></span>
+      <span class="agent-env-place-chip agent-env-place-chip--selected"><span class="agent-env-place-chip-label">Granted Tools</span><strong>{{ agent_environment_stats.selected_agent_tools }}</strong></span>
+      <span class="agent-env-place-chip agent-env-place-chip--selected"><span class="agent-env-place-chip-label">Visible Files</span><strong>{{ agent_environment_stats.selected_agent_files }}</strong></span>
+    </div>
+
+    <main class="agent-env-bay-main">
+      <section class="agent-env-bay-shell">
+        <section class="agent-env-bay-hero {% if appearance_projection.current_background.background_url %}has-scene{% endif %}"
+                 {% if appearance_projection.current_background.background_url %}style="--agent-bay-scene-image: url('{{ appearance_projection.current_background.background_url }}');"{% endif %}>
+          <div class="agent-env-bay-hero-copy">
+            <span class="agent-env-kicker">{{ appearance_projection.theme.display_name }}</span>
+            <h2>{{ selected_agent.name }}</h2>
+            <p>{{ selected_spec.identity.description or "This agent has no description yet." }}</p>
+          </div>
+          <div class="agent-env-bay-hero-meta">
+            <span class="agent-env-meta-chip">{{ selected_provider.label if selected_provider else selected_spec.tool_access.provider_id }}</span>
+            <span class="agent-env-meta-chip cell-mono">{{ selected_spec.tool_access.model }}</span>
+            <span class="agent-env-meta-chip">{% if selected_agent.is_active %}Invocation enabled{% else %}Invocation blocked{% endif %}</span>
+            <span class="agent-env-meta-chip">{{ appearance_projection.theme.chamber_label }}</span>
+          </div>
+        </section>
+
+        <div class="agent-env-bay-grid">
+          <div class="agent-env-main-stack">
+            <section class="agent-env-keycard-box" id="agent-keycard-dropzone" data-agent-id="{{ selected_agent.id }}">
+              <div class="agent-env-section-head">
+                <div>
+                  <span class="agent-env-kicker">Keycard Station</span>
+                  <h2>Keycard</h2>
+                </div>
+                <div class="agent-env-box-actions">
+                  <a href="{{ keycard_box_href }}" class="btn btn-primary btn-sm">
+                    <span class="agent-env-button-icon" aria-hidden="true">
+                      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6">
+                        <path d="M3 5.5h5l1.4 1.8H17v8.2a1.5 1.5 0 0 1-1.5 1.5H4.5A1.5 1.5 0 0 1 3 15.5z"/>
+                        <path d="M3 7.3h14"/>
+                      </svg>
+                    </span>
+                    File Explorer
+                  </a>
+                  {% if keycard_open %}<a href="{{ keycard_close_href }}" class="btn btn-ghost btn-sm">Close</a>{% endif %}
+                </div>
+              </div>
+              <div class="agent-env-inline-hint agent-env-box-copy">Files in Keycard are visible to this agent. Global decides whether those visible files are tool-eligible.</div>
+              {% if keycard_projection.visible_files %}
+              <div class="agent-env-keycard-list">
+                {% for file in keycard_projection.visible_files %}
+                {% if file.entry_kind == 'folder' %}
+                <article class="agent-env-file-pill agent-env-file-pill--folder {% if file.availability_state != 'present' %}is-missing{% endif %}">
+                  <div class="agent-env-file-pill-copy">
+                    <span class="agent-env-kicker">Folder — recursive access</span>
+                    <strong>{{ file.relative_path }}/</strong>
+                    <div class="cell-mono">{{ file.absolute_path }}</div>
+                    <div class="agent-env-inline-hint">{% if file.global_tool_eligible %}All contents tool-eligible{% else %}All contents visible only{% endif %}{% if file.availability_state != 'present' %} | Missing on disk{% endif %}</div>
+                  </div>
+                  <div class="agent-env-tool-pill-actions">
+                    <button type="button" class="btn btn-danger btn-sm" data-remove-keycard-file="{{ file.absolute_path }}">Remove</button>
+                  </div>
+                </article>
+                {% else %}
+                <article class="agent-env-file-pill {% if file.availability_state != 'present' %}is-missing{% endif %}">
+                  <div class="agent-env-file-pill-copy">
+                    <strong>{{ file.relative_path }}</strong>
+                    <div class="cell-mono">{{ file.absolute_path }}</div>
+                    <div class="agent-env-inline-hint">{% if file.global_tool_eligible %}Global tool-eligible{% else %}Visible only{% endif %}{% if file.availability_state != 'present' %} | Missing on disk{% endif %}</div>
+                  </div>
+                  <div class="agent-env-tool-pill-actions">
+                    <button type="button" class="btn btn-danger btn-sm" data-remove-keycard-file="{{ file.absolute_path }}">Remove</button>
+                  </div>
+                </article>
+                {% endif %}
+                {% endfor %}
+              </div>
+              <details class="agent-env-permission-group" open>
+                <summary>
+                  <div>
+                    <span class="agent-env-kicker">Permission Layer</span>
+                    <strong>Global</strong>
+                  </div>
+                  <span class="agent-env-meta-chip">{{ keycard_projection.global_enabled_count }} checked</span>
+                </summary>
+                <div class="agent-env-permission-list">
+                  {% for file in keycard_projection.visible_files %}
+                  <label class="agent-env-permission-row {% if file.availability_state != 'present' %}is-disabled{% endif %}">
+                    <input type="checkbox" data-global-checkbox data-absolute-path="{{ file.absolute_path }}" {% if file.global_tool_eligible %}checked{% endif %} {% if file.availability_state != 'present' %}disabled{% endif %}>
+                    <span class="agent-env-permission-copy">
+                      <strong>{{ file.relative_path }}{% if file.entry_kind == 'folder' %}/{% endif %}</strong>
+                      <span class="cell-mono">{{ file.absolute_path }}</span>
+                      {% if file.entry_kind == 'folder' %}<span class="agent-env-inline-hint">Folder — applies to all contents</span>{% endif %}
+                    </span>
+                    <span class="agent-env-inline-hint">{% if file.global_tool_eligible %}Tool eligible{% else %}Visible only{% endif %}</span>
+                  </label>
+                  {% endfor %}
+                </div>
+              </details>
+              {% else %}
+              <div class="agent-env-drop-empty">
+                <strong>No visible files assigned yet.</strong>
+                <p>Open the File Explorer drawer, then drag selected files into this Keycard box.</p>
+              </div>
+              {% endif %}
+            </section>
+
+            <section class="agent-env-tools-box" id="agent-tools-dropzone" data-agent-id="{{ selected_agent.id }}">
+              <div class="agent-env-section-head">
+                <div>
+                  <span class="agent-env-kicker">Tools Station</span>
+                  <h2>Tools</h2>
+                </div>
+                <div class="agent-env-box-actions">
+                  <a href="{{ tools_box_href }}" class="btn btn-primary btn-sm">
+                    <span class="agent-env-button-icon" aria-hidden="true">
+                      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6">
+                        <path d="M11.4 3.5a3.4 3.4 0 0 1 4.7 4.7l-2.7 2.7-2-2 2.7-2.7a.55.55 0 0 0-.78-.78L10.6 8.1l-2-2z"/>
+                        <path d="m9.2 8.8 2 2-5.2 5.2a1.42 1.42 0 0 1-2-2z"/>
+                      </svg>
+                    </span>
+                    Hammer Rack
+                  </a>
+                  {% if tools_open %}<a href="{{ tools_close_href }}" class="btn btn-ghost btn-sm">Close</a>{% endif %}
+                </div>
+              </div>
+              <div class="agent-env-inline-hint agent-env-box-copy">Drop installed capability packages here to grant truthful package permission. Local-scope tools use their own Keycard assignments; global-scope tools apply to all globally-eligible files.</div>
+              {% if tool_projection.assigned_tools %}
+
+              {# ── Macro: render one tool <details> block ── #}
+              {# We use a macro here to avoid duplicating the block for local vs global tools #}
+
+              {# LOCAL TOOLS #}
+              {% if tool_projection.local_tools %}
+              <div class="agent-env-assigned-list">
+                <div class="agent-env-scope-label" style="font-size:.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;padding:.35rem .1rem .2rem;margin-bottom:.15rem;">
+                  Local scope <span style="font-weight:400;text-transform:none;letter-spacing:0;">— per-tool Keycard assignments</span>
+                </div>
+                {% for tool in tool_projection.local_tools %}
+                <details class="agent-env-permission-group">
+                  <summary>
+                    <div>
+                      <strong>{{ tool.display_name }}</strong>
+                      <div class="cell-mono">{{ tool.capability_id }}</div>
+                    </div>
+                    <span class="agent-env-meta-chip agent-env-keycard-chip" title="Keycard — expand to manage file access for this tool">
+                      <svg style="width:12px;height:12px;display:inline-block;vertical-align:middle;margin-right:3px;" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+                        <path d="M3 5.5h5l1.4 1.8H17v8.2a1.5 1.5 0 0 1-1.5 1.5H4.5A1.5 1.5 0 0 1 3 15.5z"/>
+                        <path d="M3 7.3h14"/>
+                      </svg>
+                      Keycard {{ tool.file_rows | selectattr('tool_allowed') | list | length }}/{{ tool.file_rows | length }}
+                    </span>
+                    <button type="button" class="btn btn-ghost btn-sm" style="flex-shrink:0;"
+                            data-set-tool-scope="{{ tool.capability_id }}" data-scope-value="global"
+                            title="Switch to global scope — applies to all globally-eligible files">→ Global</button>
+                  </summary>
+                  <div class="agent-env-tool-header-actions">
+                    <span class="agent-env-inline-hint">{{ tool.capability_type }} | v{{ tool.version }} | {{ tool.pack_id }}</span>
+                    <div class="agent-env-tool-pill-actions">
+                      <a href="/capabilities/live/{{ tool.capability_id }}?return=%2Fagent-environment%2Fagents%2F{{ selected_agent.id }}" class="btn btn-ghost btn-sm">Inspect</a>
+                      <button type="button" class="btn btn-danger btn-sm" data-revoke-tool="{{ tool.capability_id }}">Remove</button>
+                    </div>
+                  </div>
+                  <div class="agent-env-permission-list">
+                    {% if tool.file_rows %}
+                      {% for file in tool.file_rows %}
+                      {% set can_toggle = file.availability_state == 'present' and file.global_tool_eligible and file.entry_kind != 'folder' %}
+                      {% set is_direct = file.direct_grant %}
+                      <label class="agent-env-permission-row {% if not can_toggle and not is_direct %}is-disabled{% endif %}">
+                        {% if file.entry_kind == 'folder' %}
+                        <input type="checkbox" disabled {% if file.tool_allowed %}checked{% endif %}>
+                        {% else %}
+                        <input type="checkbox" data-tool-file-checkbox data-capability-id="{{ tool.capability_id }}" data-absolute-path="{{ file.absolute_path }}" {% if file.tool_allowed %}checked{% endif %} {% if not can_toggle and not is_direct %}disabled{% endif %}>
+                        {% endif %}
+                        <span class="agent-env-permission-copy">
+                          <strong>{{ file.relative_path }}{% if file.entry_kind == 'folder' %}/{% endif %}</strong>
+                          <span class="cell-mono">{{ file.absolute_path }}</span>
+                          {% if file.entry_kind == 'folder' %}<span class="agent-env-inline-hint">Folder — recursive</span>{% endif %}
+                        </span>
+                        <span class="agent-env-inline-hint">
+                          {% if file.availability_state != 'present' %}
+                          Missing on disk
+                          {% elif file.entry_kind == 'folder' and file.tool_allowed %}
+                          Folder granted
+                          {% elif is_direct %}
+                          Per-tool only
+                          {% elif not file.global_tool_eligible %}
+                          Global unchecked
+                          {% elif file.tool_allowed %}
+                          Tool allowed
+                          {% else %}
+                          Tool blocked
+                          {% endif %}
+                        </span>
+                        {% if is_direct or (file.entry_kind == 'folder' and file.tool_allowed) %}
+                        <button type="button" class="btn btn-ghost btn-sm"
+                                style="margin-left:auto;flex-shrink:0;"
+                                data-revoke-tool-keycard="{{ tool.capability_id }}"
+                                data-revoke-path="{{ file.absolute_path }}">×</button>
+                        {% endif %}
+                      </label>
+                      {% endfor %}
+                    {% else %}
+                    <div class="agent-env-empty compact">
+                      <p>No Keycard entries yet. Use the controls below to assign files or folders directly to this tool.</p>
+                    </div>
+                    {% endif %}
+                  </div>
+                  <div style="padding:.5rem .75rem .75rem;border-top:1px solid var(--border-subtle,var(--border));margin-top:.25rem;">
+                    <div style="font-size:.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.35rem;">
+                      <svg style="width:11px;height:11px;vertical-align:middle;margin-right:3px;" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+                        <path d="M3 5.5h5l1.4 1.8H17v8.2a1.5 1.5 0 0 1-1.5 1.5H4.5A1.5 1.5 0 0 1 3 15.5z"/>
+                        <path d="M3 7.3h14"/>
+                      </svg>
+                      Assign to this tool only
+                    </div>
+                    <div style="display:flex;gap:.35rem;align-items:center;">
+                      <input type="text"
+                             class="input"
+                             style="font-size:.75rem;flex:1;"
+                             placeholder="Absolute path to file or folder…"
+                             data-tool-keycard-input="{{ tool.capability_id }}">
+                      <button type="button" class="btn btn-primary btn-sm"
+                              data-add-to-tool-keycard="{{ tool.capability_id }}">Add</button>
+                    </div>
+                    <div class="agent-env-inline-hint" style="margin-top:.25rem;">Only this tool gains access. Does not affect global Keycard or other tools.</div>
+                  </div>
+                </details>
+                {% endfor %}
+              </div>
+              {% endif %}
+
+              {# GLOBAL TOOLS #}
+              {% if tool_projection.global_tools %}
+              <div class="agent-env-assigned-list {% if tool_projection.local_tools %}agent-env-stack-gap{% endif %}">
+                <div class="agent-env-scope-label" style="font-size:.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;padding:.35rem .1rem .2rem;margin-bottom:.15rem;">
+                  Global scope <span style="font-weight:400;text-transform:none;letter-spacing:0;">— applies to all globally-eligible files</span>
+                </div>
+                {% for tool in tool_projection.global_tools %}
+                <details class="agent-env-permission-group">
+                  <summary>
+                    <div>
+                      <strong>{{ tool.display_name }}</strong>
+                      <div class="cell-mono">{{ tool.capability_id }}</div>
+                    </div>
+                    <span class="agent-env-meta-chip" style="background:var(--color-accent-subtle,rgba(99,102,241,.12));color:var(--color-accent,#6366f1);">
+                      Global
+                    </span>
+                    <button type="button" class="btn btn-ghost btn-sm" style="flex-shrink:0;"
+                            data-set-tool-scope="{{ tool.capability_id }}" data-scope-value="local"
+                            title="Switch to local scope — use per-tool Keycard assignments">→ Local</button>
+                  </summary>
+                  <div class="agent-env-tool-header-actions">
+                    <span class="agent-env-inline-hint">{{ tool.capability_type }} | v{{ tool.version }} | {{ tool.pack_id }}</span>
+                    <div class="agent-env-tool-pill-actions">
+                      <a href="/capabilities/live/{{ tool.capability_id }}?return=%2Fagent-environment%2Fagents%2F{{ selected_agent.id }}" class="btn btn-ghost btn-sm">Inspect</a>
+                      <button type="button" class="btn btn-danger btn-sm" data-revoke-tool="{{ tool.capability_id }}">Remove</button>
+                    </div>
+                  </div>
+                  <div class="agent-env-permission-list">
+                    <div class="agent-env-empty compact" style="padding:.5rem .75rem;">
+                      <p>Global scope is active. This tool may access any file that is globally eligible for this agent. Local Keycard assignments for this tool are preserved and will apply when switched back to local scope.</p>
+                    </div>
+                  </div>
+                </details>
+                {% endfor %}
+              </div>
+              {% endif %}
+
+              {% else %}
+              <div class="agent-env-drop-empty">
+                <strong>No tools granted yet.</strong>
+                <p>Open the Hammer Rack, then drag installed capability packages into this Tools box.</p>
+              </div>
+              {% endif %}
+              {% if tool_projection.unavailable_assignments %}
+              <div class="agent-env-assigned-list agent-env-stack-gap">
+                {% for tool in tool_projection.unavailable_assignments %}
+                <article class="agent-env-tool-pill is-missing">
+                  <div class="agent-env-tool-pill-copy">
+                    <strong>{{ tool.capability_id }}</strong>
+                    <div class="agent-env-inline-hint">Granted here, but no longer installed in Capability Platform.</div>
+                  </div>
+                  <div class="agent-env-tool-pill-actions">
+                    <button type="button" class="btn btn-danger btn-sm" data-revoke-tool="{{ tool.capability_id }}">Remove</button>
+                  </div>
+                </article>
+                {% endfor %}
+              </div>
+              {% endif %}
+            </section>
+          </div>
+
+          <div class="agent-env-side-stack">
+            <section class="agent-env-side-card">
+              <div class="agent-env-section-head">
+                <div>
+                  <span class="agent-env-kicker">Presentation</span>
+                  <h2>Appearance</h2>
+                </div>
+                <a href="{{ environment_settings_href }}" class="btn btn-ghost btn-sm">Theme Assets</a>
+              </div>
+              <div class="agent-env-appearance-preview {% if appearance_projection.current_background.background_url %}has-image{% endif %}"
+                   {% if appearance_projection.current_background.background_url %}style="--agent-appearance-image: url('{{ appearance_projection.current_background.background_url }}');"{% endif %}>
+                <div class="agent-env-appearance-preview-copy">
+                  <span class="agent-env-kicker">{{ appearance_projection.theme.display_name }}</span>
+                  <strong>{{ appearance_projection.theme.chamber_label }}</strong>
+                  <p>
+                    {% if appearance_projection.selection_source == "custom" %}
+                    Using this agent's custom background.
+                    {% elif appearance_projection.selection_source == "shared" %}
+                    Using a fixed shared {{ appearance_projection.theme.display_name }} background.
+                    {% else %}
+                    Default / Random is pulling from the shared {{ appearance_projection.theme.display_name }} pool.
+                    {% endif %}
+                  </p>
+                </div>
+              </div>
+              <div class="agent-env-inline-hint agent-env-box-copy">This controls how this agent appears in the front chamber hall. Shared pool assets stay theme-scoped; custom uploads stay agent-scoped.</div>
+              <form method="post" action="/agent-environment/agents/{{ selected_agent.id }}/appearance/random" class="agent-env-appearance-inline-form">
+                <button type="submit" class="btn {% if appearance_projection.background_mode == 'random' %}btn-primary{% else %}btn-ghost{% endif %} btn-sm">Default / Random</button>
+              </form>
+              {% if appearance_projection.shared_backgrounds %}
+              <div class="agent-env-appearance-grid">
+                {% for item in appearance_projection.shared_backgrounds %}
+                <article class="agent-env-appearance-card {% if item.is_selected %}is-selected{% endif %}">
+                  <div class="agent-env-appearance-thumb" style="--agent-appearance-thumb: url('{{ item.asset_url }}');"></div>
+                  <div class="agent-env-appearance-card-copy">
+                    <strong>{{ item.asset.display_name }}</strong>
+                    <div class="agent-env-inline-hint">Shared {{ appearance_projection.theme.display_name }} pool</div>
+                  </div>
+                  <form method="post" action="/agent-environment/agents/{{ selected_agent.id }}/appearance/shared">
+                    <input type="hidden" name="asset_id" value="{{ item.asset.id }}">
+                    <button type="submit" class="btn {% if item.is_selected %}btn-primary{% else %}btn-ghost{% endif %} btn-sm">Use This</button>
+                  </form>
+                </article>
+                {% endfor %}
+              </div>
+              {% else %}
+              <div class="agent-env-empty compact"><p>No shared {{ appearance_projection.theme.display_name }} backgrounds are available yet.</p></div>
+              {% endif %}
+
+              <div class="agent-env-section-head agent-env-section-head--nested">
+                <div>
+                  <span class="agent-env-kicker">Agent-scoped</span>
+                  <h2>Custom Backgrounds</h2>
+                </div>
+              </div>
+              {% if appearance_projection.custom_backgrounds %}
+              <div class="agent-env-appearance-grid">
+                {% for item in appearance_projection.custom_backgrounds %}
+                <article class="agent-env-appearance-card {% if item.is_selected %}is-selected{% endif %}">
+                  <div class="agent-env-appearance-thumb" style="--agent-appearance-thumb: url('{{ item.asset_url }}');"></div>
+                  <div class="agent-env-appearance-card-copy">
+                    <strong>{{ item.asset.display_name }}</strong>
+                    <div class="agent-env-inline-hint">Custom to {{ selected_agent.name }}</div>
+                  </div>
+                  <form method="post" action="/agent-environment/agents/{{ selected_agent.id }}/appearance/custom/select">
+                    <input type="hidden" name="asset_id" value="{{ item.asset.id }}">
+                    <button type="submit" class="btn {% if item.is_selected %}btn-primary{% else %}btn-ghost{% endif %} btn-sm">Use Custom</button>
+                  </form>
+                </article>
+                {% endfor %}
+              </div>
+              {% else %}
+              <div class="agent-env-empty compact"><p>No custom backgrounds uploaded for this agent yet.</p></div>
+              {% endif %}
+
+              <form method="post"
+                    action="/agent-environment/agents/{{ selected_agent.id }}/appearance/custom/upload"
+                    enctype="multipart/form-data"
+                    class="agent-env-upload-form">
+                <label>
+                  <span class="agent-env-kicker">Upload Custom Background</span>
+                  <input type="file" name="background_file" accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp">
+                </label>
+                <button type="submit" class="btn btn-primary btn-sm">Upload Custom</button>
+              </form>
+            </section>
+
+            <section class="agent-env-side-card">
+              <div class="agent-env-section-head">
+                <div>
+                  <span class="agent-env-kicker">State</span>
+                  <h2>Run Presence</h2>
+                </div>
+              </div>
+              <div class="agent-env-state-grid">
+                <div><span class="agent-env-kicker">Activation</span><p>{{ selected_spec.current_state.activation_status }}</p></div>
+                <div><span class="agent-env-kicker">Health</span><p>{{ selected_spec.current_state.health }}</p></div>
+                <div><span class="agent-env-kicker">Current Run</span><p class="cell-mono">{{ selected_spec.current_state.current_run_id[:8] ~ '...' if selected_spec.current_state.current_run_id else '-' }}</p></div>
+                <div><span class="agent-env-kicker">Last Activated</span><p class="cell-mono">{{ selected_spec.current_state.last_activated_at[:16] if selected_spec.current_state.last_activated_at else '-' }}</p></div>
+              </div>
+              <div class="agent-env-inline-hint agent-env-stack-gap">Activation, package grant, Keycard visibility, Global eligibility, and tool-on-file permission now form the truthful invocation boundary for agent-triggered work.</div>
+            </section>
+            <section class="agent-env-side-card agent-env-side-card--wide" id="bay-workflow-section">
+              <div class="agent-env-section-head">
+                <div>
+                  <span class="agent-env-kicker">Workflow Station</span>
+                  <h2>Workflow</h2>
+                </div>
+                <div style="display:flex;gap:.4rem;align-items:center;">
+                  <a href="{{ inspect_agent_href }}" class="btn btn-ghost btn-sm">Edit in Admin</a>
+                  <button class="btn btn-primary btn-sm" id="bay-go-eat-btn"
+                          onclick="bayTriggerWorkflowRun('{{ selected_agent.id }}')"
+                          {% if not selected_agent.is_active %}disabled title="Activate agent before running"{% endif %}>
+                    Go Eat
+                  </button>
+                </div>
+              </div>
+              {% if agent_workflows %}
+              <div style="margin:.4rem 0 .5rem;">
+                {% for wf in agent_workflows %}
+                <div style="display:flex;align-items:center;gap:.5rem;padding:.25rem 0;border-bottom:1px solid var(--border-subtle, var(--border));">
+                  <span class="badge {% if wf.is_active %}badge-active{% else %}badge-inactive{% endif %}" style="flex-shrink:0;">{{ "active" if wf.is_active else "off" }}</span>
+                  <span style="font-size:.8rem;font-weight:600;">{{ wf.display_name }}</span>
+                  <span class="agent-env-inline-hint" style="margin-left:auto;font-size:.7rem;">{{ wf.assigned_triggers | join(', ') }}</span>
+                </div>
+                {% endfor %}
+              </div>
+              {% else %}
+              <div class="agent-env-empty compact"><p>No workflows configured. Add one in Admin.</p></div>
+              {% endif %}
+              <span id="bay-workflow-run-status-pre" class="agent-env-inline-hint" style="font-size:.75rem;display:block;margin:.25rem 0;"></span>
+              <div style="margin:.5rem 0;">
+                <div style="font-size:.7rem;color:var(--text-muted);margin-bottom:.3rem;text-transform:uppercase;letter-spacing:.04em;">Resolved Targets</div>
+                {% if workflow_target_preview.error %}
+                  <div style="font-size:.75rem;color:var(--color-danger, #c0392b);background:var(--surface-1);border:1px solid var(--border);border-radius:3px;padding:.4rem .6rem;">
+                    {{ workflow_target_preview.error }}
+                  </div>
+                {% elif workflow_target_preview.targets %}
+                  {% for t in workflow_target_preview.targets %}
+                    <div class="cell-mono" style="font-size:.72rem;padding:.2rem 0;border-bottom:1px solid var(--border-subtle, var(--border));word-break:break-all;">{{ t }}</div>
+                  {% endfor %}
+                  <div class="agent-env-inline-hint" style="margin-top:.25rem;">
+                    {{ workflow_target_preview.targets | length }} target{{ 's' if workflow_target_preview.targets | length != 1 else '' }}{% if workflow_target_preview.invoked_capabilities %} · {{ workflow_target_preview.invoked_capabilities | join(', ') }}{% endif %}
+                  </div>
+                {% else %}
+                  <span class="agent-env-inline-hint">No targets resolved yet.</span>
+                {% endif %}
+              </div>
+              <span id="bay-workflow-run-status" style="font-size:.75rem;color:var(--text-muted);"></span>
+              {% if workflow_runs %}
+              <div class="agent-env-run-list" style="margin-top:.5rem;">
+                {% for run in workflow_runs %}
+                <a href="/runs/{{ run.id }}" class="agent-env-run-row">
+                  <span class="cell-mono">{{ run.id[:8] }}...</span>
+                  <span class="badge badge-{{ run.status }}">{{ run.status }}</span>
+                  <span class="cell-mono">{{ run.started_at[:16].replace('T', ' ') if run.started_at else '-' }}</span>
+                </a>
+                {% endfor %}
+              </div>
+              {% else %}
+              <div class="agent-env-empty compact"><p>No workflow runs yet.</p></div>
+              {% endif %}
+            </section>
+
+            <section class="agent-env-side-card agent-env-side-card--wide">
+              <div class="agent-env-section-head">
+                <div>
+                  <span class="agent-env-kicker">Recent Activity</span>
+                  <h2>Runs</h2>
+                </div>
+                <a href="/runs" class="btn btn-ghost btn-sm">All Runs</a>
+              </div>
+              {% if recent_runs %}
+              <div class="agent-env-run-list">
+                {% for run in recent_runs %}
+                <a href="/runs/{{ run.id }}" class="agent-env-run-row">
+                  <span class="cell-mono">{{ run.id[:8] }}...</span>
+                  <span class="badge badge-{{ run.status }}">{{ run.status }}</span>
+                  <span class="cell-mono">{{ run.started_at[:16].replace('T', ' ') if run.started_at else '-' }}</span>
+                </a>
+                {% endfor %}
+              </div>
+              {% else %}
+              <div class="agent-env-empty compact"><p>No runs associated with this agent yet.</p></div>
+              {% endif %}
+            </section>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    {% if tools_open %}
+    <div class="agent-env-drawer-layer">
+      <a href="{{ tools_close_href }}" class="agent-env-drawer-backdrop" aria-label="Close tools drawer"></a>
+      <aside class="agent-env-tools-drawer">
+        <div class="agent-env-section-head">
+          <div>
+            <span class="agent-env-kicker">Tools Station</span>
+            <h2>Hammer Rack</h2>
+          </div>
+          <a href="{{ tools_close_href }}" class="btn btn-ghost btn-sm">Close</a>
+        </div>
+        <div class="agent-env-inline-hint agent-env-box-copy">Drag installed packages into the Tools box or assign them directly from this rack.</div>
+        {% if tool_projection.available_tools %}
+        <div class="agent-env-drawer-list">
+          {% for tool in tool_projection.available_tools %}
+          <article class="agent-env-drawer-card" draggable="true" data-capability-card data-capability-id="{{ tool.capability_id }}">
+            <div class="agent-env-drawer-card-copy">
+              <strong>{{ tool.display_name }}</strong>
+              <div class="cell-mono">{{ tool.capability_id }}</div>
+              <div class="agent-env-inline-hint">{{ tool.capability_type }} | v{{ tool.version }} | {{ tool.pack_id }}</div>
+            </div>
+            <div class="agent-env-drawer-card-meta">
+              <a href="/capabilities/live/{{ tool.capability_id }}?return=%2Fagent-environment%2Fagents%2F{{ selected_agent.id }}" class="btn btn-ghost btn-sm">Inspect</a>
+              <button type="button" class="btn btn-primary btn-sm" data-assign-tool="{{ tool.capability_id }}">Grant</button>
+            </div>
+          </article>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="agent-env-empty compact"><p>All installed packages are already granted to this agent.</p></div>
+        {% endif %}
+      </aside>
+    </div>
+    {% endif %}
+
+    {% if keycard_open %}
+    <div class="agent-env-drawer-layer">
+      <a href="{{ keycard_close_href }}" class="agent-env-drawer-backdrop" aria-label="Close keycard drawer"></a>
+      <aside class="agent-env-tools-drawer agent-env-tools-drawer--wide">
+        <div class="agent-env-section-head">
+          <div>
+            <span class="agent-env-kicker">Keycard Station</span>
+            <h2>File Explorer</h2>
+          </div>
+          <a href="{{ keycard_close_href }}" class="btn btn-ghost btn-sm">Close</a>
+        </div>
+        <div class="agent-env-inline-hint agent-env-box-copy">This explorer is read-only. Dropping files into Keycard grants visibility only; files stay exactly where they already live on disk.</div>
+        <form method="get" action="{{ keycard_box_href }}" class="agent-env-explorer-form">
+          <label>
+            <span class="agent-env-kicker">Explorer Root</span>
+            <input type="text" name="root" value="{{ keycard_projection.explorer.root_path }}" class="input">
+          </label>
+          <button type="submit" class="btn btn-sm">Open Root</button>
+        </form>
+        <div class="agent-env-explorer-toolbar">
+          <div>
+            <span class="agent-env-kicker">Current Path</span>
+            <strong class="cell-mono">{{ keycard_projection.explorer.current_path }}</strong>
+          </div>
+          <div class="agent-env-tool-pill-actions">
+            {% if keycard_projection.explorer.parent_href %}
+            <a href="{{ keycard_projection.explorer.parent_href }}" class="btn btn-ghost btn-sm">Up</a>
+            {% endif %}
+            <button type="button" class="btn btn-primary btn-sm" data-assign-selected-files>Assign Selected</button>
+          </div>
+        </div>
+        <div class="agent-env-drawer-list">
+          {% for entry in keycard_projection.explorer.entries %}
+            {% if entry.entry_type == "directory" %}
+            <div class="agent-env-drawer-card agent-env-drawer-card--directory">
+              <div class="agent-env-drawer-card-copy">
+                <strong>{{ entry.name }}/</strong>
+                <div class="cell-mono">{{ entry.absolute_path }}</div>
+                <div class="agent-env-inline-hint">Directory</div>
+              </div>
+              <div class="agent-env-drawer-card-meta">
+                <a href="{{ entry.href }}" class="btn btn-ghost btn-sm">Open</a>
+                <button type="button" class="btn btn-primary btn-sm"
+                        data-assign-folder="{{ entry.absolute_path }}"
+                        title="Add entire folder (recursive) to Keycard">Add Folder</button>
+              </div>
+            </div>
+            {% else %}
+            <label class="agent-env-drawer-card {% if entry.is_visible %}is-disabled{% endif %}"
+                   {% if not entry.is_visible %}draggable="true"{% endif %}
+                   data-file-card
+                   data-absolute-path="{{ entry.absolute_path }}">
+              <div class="agent-env-drawer-select">
+                <input type="checkbox"
+                       class="agent-env-file-select"
+                       value="{{ entry.absolute_path }}"
+                       {% if entry.is_visible %}checked disabled{% endif %}>
+              </div>
+              <div class="agent-env-drawer-card-copy">
+                <strong>{{ entry.name }}</strong>
+                <div class="cell-mono">{{ entry.relative_path }}</div>
+                <div class="agent-env-inline-hint">{% if entry.is_visible %}Already in Keycard{% else %}File{% endif %}</div>
+              </div>
+              <div class="agent-env-drawer-card-meta">
+                {% if entry.is_visible %}
+                <span class="agent-env-meta-chip">Assigned</span>
+                {% else %}
+                <span class="agent-env-meta-chip">Drag or select</span>
+                {% endif %}
+              </div>
+            </label>
+            {% endif %}
+          {% endfor %}
+        </div>
+      </aside>
+    </div>
+    {% endif %}
+  </div>
+
+  {% if selected_agent %}
+  <script>
+    (() => {
+      const agentId = {{ selected_agent.id|tojson }};
+      const keycardRootPath = {{ keycard_projection.explorer.root_path|tojson }};
+
+      async function apiRequest(url, method, body) {
+        const response = await fetch(url, {
+          method,
+          headers: body ? { "Content-Type": "application/json" } : {},
+          body: body ? JSON.stringify(body) : undefined
+        });
+        if (!response.ok) {
+          let message = response.statusText;
+          try {
+            const payload = await response.json();
+            message = payload.detail || payload.message || message;
+          } catch (error) {
+          }
+          throw new Error(message);
+        }
+        if (response.status === 204) {
+          return null;
+        }
+        return response.json();
+      }
+
+      function reloadPage() {
+        window.location.reload();
+      }
+
+      async function assignTool(capabilityId) {
+        await apiRequest(`/api/agents/${agentId}/tools/${encodeURIComponent(capabilityId)}`, "POST");
+        reloadPage();
+      }
+
+      async function revokeTool(capabilityId) {
+        await apiRequest(`/api/agents/${agentId}/tools/${encodeURIComponent(capabilityId)}`, "DELETE");
+        reloadPage();
+      }
+
+      async function assignFiles(absolutePaths) {
+        if (!absolutePaths.length) {
+          return;
+        }
+        await apiRequest(`/api/agents/${agentId}/keycard/files`, "POST", {
+          root_path: keycardRootPath,
+          absolute_paths: absolutePaths
+        });
+        reloadPage();
+      }
+
+      async function assignFolder(absolutePath) {
+        await apiRequest(`/api/agents/${agentId}/keycard/folders`, "POST", {
+          root_path: keycardRootPath,
+          absolute_path: absolutePath
+        });
+        reloadPage();
+      }
+
+      async function removeKeycardFile(absolutePath) {
+        await apiRequest(`/api/agents/${agentId}/keycard/files`, "DELETE", {
+          absolute_path: absolutePath
+        });
+        reloadPage();
+      }
+
+      async function toggleGlobalEligibility(absolutePath, enabled) {
+        await apiRequest(`/api/agents/${agentId}/keycard/files/global`, "PATCH", {
+          absolute_path: absolutePath,
+          enabled
+        });
+        reloadPage();
+      }
+
+      async function toggleToolFilePermission(capabilityId, absolutePath, allowed) {
+        await apiRequest(`/api/agents/${agentId}/tool-file-permissions`, "PATCH", {
+          capability_id: capabilityId,
+          absolute_path: absolutePath,
+          allowed
+        });
+        reloadPage();
+      }
+
+      function selectedDrawerFiles() {
+        return Array.from(document.querySelectorAll(".agent-env-file-select"))
+          .filter((input) => input.checked && !input.disabled)
+          .map((input) => input.value);
+      }
+
+      function payloadForFileCard(card) {
+        const selected = selectedDrawerFiles();
+        return {
+          kind: "keycard-files",
+          rootPath: keycardRootPath,
+          absolutePaths: selected.length ? selected : [card.dataset.absolutePath]
+        };
+      }
+
+      document.querySelectorAll("[data-assign-tool]").forEach((button) => {
+        button.addEventListener("click", async () => {
+          try {
+            await assignTool(button.dataset.assignTool);
+          } catch (error) {
+            window.alert(error.message);
+          }
+        });
+      });
+
+      document.querySelectorAll("[data-revoke-tool]").forEach((button) => {
+        button.addEventListener("click", async () => {
+          try {
+            await revokeTool(button.dataset.revokeTool);
+          } catch (error) {
+            window.alert(error.message);
+          }
+        });
+      });
+
+      document.querySelectorAll("[data-remove-keycard-file]").forEach((button) => {
+        button.addEventListener("click", async () => {
+          try {
+            await removeKeycardFile(button.dataset.removeKeycardFile);
+          } catch (error) {
+            window.alert(error.message);
+          }
+        });
+      });
+
+      document.querySelectorAll("[data-global-checkbox]").forEach((checkbox) => {
+        checkbox.addEventListener("change", async () => {
+          try {
+            await toggleGlobalEligibility(checkbox.dataset.absolutePath, checkbox.checked);
+          } catch (error) {
+            checkbox.checked = !checkbox.checked;
+            window.alert(error.message);
+          }
+        });
+      });
+
+      document.querySelectorAll("[data-tool-file-checkbox]").forEach((checkbox) => {
+        checkbox.addEventListener("change", async () => {
+          try {
+            await toggleToolFilePermission(
+              checkbox.dataset.capabilityId,
+              checkbox.dataset.absolutePath,
+              checkbox.checked
+            );
+          } catch (error) {
+            checkbox.checked = !checkbox.checked;
+            window.alert(error.message);
+          }
+        });
+      });
+
+      document.querySelectorAll("[data-capability-card]").forEach((card) => {
+        card.addEventListener("dragstart", (event) => {
+          card.classList.add("is-dragging");
+          event.dataTransfer.effectAllowed = "copy";
+          event.dataTransfer.setData("application/json", JSON.stringify({
+            kind: "capability",
+            capabilityId: card.dataset.capabilityId
+          }));
+        });
+        card.addEventListener("dragend", () => {
+          card.classList.remove("is-dragging");
+        });
+      });
+
+      document.querySelectorAll("[data-file-card]").forEach((card) => {
+        if (card.classList.contains("is-disabled")) {
+          return;
+        }
+        card.addEventListener("dragstart", (event) => {
+          card.classList.add("is-dragging");
+          event.dataTransfer.effectAllowed = "copy";
+          event.dataTransfer.setData("application/json", JSON.stringify(payloadForFileCard(card)));
+        });
+        card.addEventListener("dragend", () => {
+          card.classList.remove("is-dragging");
+        });
+      });
+
+      const toolsDropzone = document.getElementById("agent-tools-dropzone");
+      if (toolsDropzone) {
+        ["dragenter", "dragover"].forEach((eventName) => {
+          toolsDropzone.addEventListener(eventName, (event) => {
+            event.preventDefault();
+            toolsDropzone.classList.add("is-drop-active");
+          });
+        });
+        ["dragleave", "drop"].forEach((eventName) => {
+          toolsDropzone.addEventListener(eventName, () => {
+            toolsDropzone.classList.remove("is-drop-active");
+          });
+        });
+        toolsDropzone.addEventListener("drop", async (event) => {
+          event.preventDefault();
+          try {
+            const payload = JSON.parse(event.dataTransfer.getData("application/json"));
+            if (payload.kind === "capability") {
+              await assignTool(payload.capabilityId);
+            }
+          } catch (error) {
+            window.alert(error.message || "Could not assign tool.");
+          }
+        });
+      }
+
+      const keycardDropzone = document.getElementById("agent-keycard-dropzone");
+      if (keycardDropzone) {
+        ["dragenter", "dragover"].forEach((eventName) => {
+          keycardDropzone.addEventListener(eventName, (event) => {
+            event.preventDefault();
+            keycardDropzone.classList.add("is-drop-active");
+          });
+        });
+        ["dragleave", "drop"].forEach((eventName) => {
+          keycardDropzone.addEventListener(eventName, () => {
+            keycardDropzone.classList.remove("is-drop-active");
+          });
+        });
+        keycardDropzone.addEventListener("drop", async (event) => {
+          event.preventDefault();
+          try {
+            const payload = JSON.parse(event.dataTransfer.getData("application/json"));
+            if (payload.kind === "keycard-files") {
+              await assignFiles(payload.absolutePaths || []);
+            }
+          } catch (error) {
+            window.alert(error.message || "Could not assign files.");
+          }
+        });
+      }
+
+      document.querySelectorAll("[data-assign-selected-files]").forEach((button) => {
+        button.addEventListener("click", async () => {
+          const files = selectedDrawerFiles();
+          if (!files.length) {
+            window.alert("Select one or more files first.");
+            return;
+          }
+          try {
+            await assignFiles(files);
+          } catch (error) {
+            window.alert(error.message);
+          }
+        });
+      });
+
+      document.querySelectorAll("[data-assign-folder]").forEach((button) => {
+        button.addEventListener("click", async () => {
+          try {
+            await assignFolder(button.dataset.assignFolder);
+          } catch (error) {
+            window.alert(error.message || "Could not assign folder.");
+          }
+        });
+      });
+
+      async function setToolScope(capabilityId, scope) {
+        await apiRequest(
+          `/api/agents/${agentId}/tools/${encodeURIComponent(capabilityId)}/scope`,
+          "PATCH",
+          { scope }
+        );
+        reloadPage();
+      }
+
+      document.querySelectorAll("[data-set-tool-scope]").forEach((button) => {
+        button.addEventListener("click", async (event) => {
+          event.preventDefault();
+          try {
+            await setToolScope(button.dataset.setToolScope, button.dataset.scopeValue);
+          } catch (error) {
+            window.alert(error.message || "Could not update scope.");
+          }
+        });
+      });
+
+      async function assignToToolKeycard(capabilityId, absolutePath) {
+        await apiRequest(
+          `/api/agents/${agentId}/tools/${encodeURIComponent(capabilityId)}/keycard`,
+          "POST",
+          { root_path: keycardRootPath, absolute_path: absolutePath }
+        );
+        reloadPage();
+      }
+
+      async function revokeFromToolKeycard(capabilityId, absolutePath) {
+        await apiRequest(
+          `/api/agents/${agentId}/tools/${encodeURIComponent(capabilityId)}/keycard`,
+          "DELETE",
+          { absolute_path: absolutePath }
+        );
+        reloadPage();
+      }
+
+      document.querySelectorAll("[data-add-to-tool-keycard]").forEach((button) => {
+        button.addEventListener("click", async () => {
+          const capId = button.dataset.addToToolKeycard;
+          const input = document.querySelector(`[data-tool-keycard-input="${CSS.escape(capId)}"]`);
+          const path = (input?.value || "").trim();
+          if (!path) {
+            window.alert("Enter an absolute path first.");
+            return;
+          }
+          try {
+            await assignToToolKeycard(capId, path);
+          } catch (error) {
+            window.alert(error.message || "Could not assign path.");
+          }
+        });
+      });
+
+      document.querySelectorAll("[data-revoke-tool-keycard]").forEach((button) => {
+        button.addEventListener("click", async () => {
+          try {
+            await revokeFromToolKeycard(
+              button.dataset.revokeToolKeycard,
+              button.dataset.revokePath
+            );
+          } catch (error) {
+            window.alert(error.message || "Could not revoke.");
+          }
+        });
+      });
+    })();
+  </script>
+  {% endif %}
+
+  {% if selected_agent %}
+  <script>
+    function bayTriggerWorkflowRun(agentId) {
+      var btn = document.getElementById('bay-go-eat-btn');
+      var status = document.getElementById('bay-workflow-run-status');
+      btn.disabled = true;
+      status.textContent = 'Submitting…';
+      fetch('/api/agents/' + agentId + '/workflow/run', {method: 'POST'})
+        .then(function(r) { return r.json().then(function(data) { return {ok: r.ok, data: data}; }); })
+        .then(function(res) {
+          if (res.ok) {
+            var ids = res.data.run_ids || [];
+            status.textContent = ids.length === 1
+              ? 'Run ' + ids[0].slice(0, 8) + '… started.'
+              : ids.length + ' runs started across ' + ids.length + ' targets.';
+            setTimeout(function(){ window.location.reload(); }, 2500);
+          } else {
+            status.textContent = 'Error: ' + (res.data.detail || 'unknown error');
+            btn.disabled = false;
+          }
+        });
+    }
+  </script>
+  {% endif %}
+</body>
+</html>

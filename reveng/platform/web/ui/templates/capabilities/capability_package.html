@@ -1,0 +1,537 @@
+{% extends "base.html" %}
+
+{% block title %}{{ published.display_name or published.capability_id }} — Package — RevEng{% endblock %}
+{% block page_title %}{{ published.display_name or published.capability_id }}{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ workspace_href }}" class="btn btn-ghost">Workspace</a>
+  <a href="/capabilities" class="btn btn-ghost">Capabilities</a>
+{% endblock %}
+
+{% block content %}
+{% if page_error %}
+<div class="alert alert-error" id="pkg-page-error">{{ page_error }}</div>
+{% endif %}
+{% if page_notice %}
+<div class="alert alert-success" id="pkg-page-notice">{{ page_notice }}</div>
+{% endif %}
+
+<div id="pkg-feedback" class="alert alert-success" style="display:none;margin-bottom:1rem;"></div>
+<div id="pkg-error" class="alert alert-error" style="display:none;margin-bottom:1rem;"></div>
+
+{# ── Package identity header ─────────────────────────────────────────────── #}
+<div class="card" style="margin-bottom:1.5rem;">
+  <div class="card-header">
+    <span class="card-title mono">{{ published.capability_id }}</span>
+    <div style="display:flex;gap:.5rem;align-items:center;">
+      <span class="badge {% if published.capability_type == 'composite' %}badge-running{% else %}badge-inactive{% endif %}">
+        {{ published.capability_type }}
+      </span>
+      <span class="badge badge-completed">{{ published.lifecycle_state }}</span>
+      <span class="badge" style="background:var(--surface-2);color:var(--text-muted);">v{{ published.version }}</span>
+    </div>
+  </div>
+  <div class="card-body">
+    <div class="meta-grid" style="margin-bottom:0;">
+      <div class="meta-item">
+        <div class="meta-label">Display Name</div>
+        <div class="meta-value">{{ published.display_name or "—" }}</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label">Pack</div>
+        <div class="meta-value mono">{{ published.pack_id or "—" }}</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label">Execution Source</div>
+        <div class="meta-value mono">{{ published.execution_source or "binding_ref" }}</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label">Entrypoint</div>
+        <div class="meta-value mono">{{ published.entrypoint or "run" }}</div>
+      </div>
+    </div>
+    {% if published.description %}
+    <div style="color:var(--text-muted);font-size:.9rem;margin-top:.75rem;line-height:1.6;">{{ published.description }}</div>
+    {% endif %}
+  </div>
+</div>
+
+{# ── Tab nav ─────────────────────────────────────────────────────────────── #}
+<div style="display:flex;gap:.25rem;margin-bottom:1rem;border-bottom:1px solid var(--border);padding-bottom:.5rem;">
+  <button type="button" class="btn btn-ghost pkg-tab-btn" data-tab="unpublished" onclick="pkgSwitchTab('unpublished')">
+    Unpublished
+    {% if unpublished %}
+    <span class="badge badge-inactive" style="margin-left:.35rem;font-size:.7rem;">{{ unpublished.status }}</span>
+    {% endif %}
+  </button>
+  <button type="button" class="btn btn-ghost pkg-tab-btn" data-tab="published" onclick="pkgSwitchTab('published')">Published</button>
+  <button type="button" class="btn btn-ghost pkg-tab-btn" data-tab="history" onclick="pkgSwitchTab('history')">History</button>
+</div>
+
+{# ── Unpublished surface ──────────────────────────────────────────────────── #}
+<div id="pkg-tab-unpublished" class="pkg-tab-panel">
+
+  {% if unpublished %}
+  {# ── Open draft exists ── #}
+  <div class="card" style="margin-bottom:1rem;">
+    <div class="card-header">
+      <span class="card-title">Unpublished Surface</span>
+      <span class="badge {% if unpublished.status == 'validated' %}badge-completed{% elif unpublished.status == 'published' %}badge-running{% else %}badge-inactive{% endif %}">
+        {{ unpublished.status }}
+      </span>
+    </div>
+    <div class="card-body" style="display:grid;gap:1rem;">
+      <div class="meta-grid" style="margin-bottom:0;">
+        <div class="meta-item">
+          <div class="meta-label">Draft</div>
+          <div class="meta-value mono" style="font-size:.85rem;">{{ unpublished.draft_name }}</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">Draft ID</div>
+          <div class="meta-value mono" style="font-size:.75rem;color:var(--text-muted);">{{ unpublished.draft_id }}</div>
+        </div>
+      </div>
+
+      {# ── Structured field editors ────────────────────────────────────── #}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+        <div>
+          <div class="meta-label" style="margin-bottom:.25rem;">Display Name</div>
+          <input type="text" id="edit-display-name" class="form-control" value="{{ unpublished.draft_data.get('display_name', '') }}">
+        </div>
+        <div>
+          <div class="meta-label" style="margin-bottom:.25rem;">Version</div>
+          <input type="text" id="edit-version" class="form-control" value="{{ unpublished.draft_data.get('version', '1') }}">
+        </div>
+      </div>
+
+      <div>
+        <div class="meta-label" style="margin-bottom:.25rem;">Description</div>
+        <textarea id="edit-description" class="form-control" style="min-height:64px;">{{ unpublished.draft_data.get('description', '') }}</textarea>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+        <div>
+          <div class="meta-label" style="margin-bottom:.25rem;">Pack ID</div>
+          <input type="text" id="edit-pack-id" class="form-control" value="{{ unpublished.draft_data.get('pack_id', '') }}">
+        </div>
+        <div>
+          <div class="meta-label" style="margin-bottom:.25rem;">Entrypoint</div>
+          <input type="text" id="edit-entrypoint" class="form-control" value="{{ unpublished.draft_data.get('entrypoint', 'run') }}" placeholder="run">
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+        <div>
+          <div class="meta-label" style="margin-bottom:.25rem;">Capability Type</div>
+          <select id="edit-capability-type" class="form-control">
+            <option value="function" {% if unpublished.draft_data.get('capability_type', 'function') == 'function' %}selected{% endif %}>function</option>
+            <option value="composite" {% if unpublished.draft_data.get('capability_type') == 'composite' %}selected{% endif %}>composite</option>
+          </select>
+        </div>
+        <div>
+          <div class="meta-label" style="margin-bottom:.25rem;">Execution Source</div>
+          <select id="edit-execution-source" class="form-control">
+            <option value="code_block" {% if unpublished.draft_data.get('execution_source', 'code_block') == 'code_block' %}selected{% endif %}>code_block</option>
+            <option value="binding_ref" {% if unpublished.draft_data.get('execution_source') == 'binding_ref' %}selected{% endif %}>binding_ref (builtin)</option>
+            <option value="generated_file" {% if unpublished.draft_data.get('execution_source') == 'generated_file' %}selected{% endif %}>generated_file</option>
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <div class="meta-label" style="margin-bottom:.25rem;">Tags <span style="color:var(--text-muted);font-size:.78rem;">(one per line)</span></div>
+        <textarea id="edit-tags" class="form-control" style="min-height:60px;font-family:var(--font-mono);font-size:.82rem;">{{ (unpublished.draft_data.get('tags', []) | join('\n')) }}</textarea>
+      </div>
+
+      <div>
+        <div class="meta-label" style="margin-bottom:.4rem;">Contract</div>
+        <div style="display:grid;gap:.5rem;">
+          <div>
+            <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:.2rem;">Inputs (one per line)</div>
+            <textarea id="edit-contract-inputs" class="form-control" style="min-height:56px;font-family:var(--font-mono);font-size:.8rem;">{{ (unpublished.draft_data.get('contract', {}).get('inputs', []) | join('\n')) }}</textarea>
+          </div>
+          <div>
+            <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:.2rem;">Output (one per line)</div>
+            <textarea id="edit-contract-output" class="form-control" style="min-height:56px;font-family:var(--font-mono);font-size:.8rem;">{{ (unpublished.draft_data.get('contract', {}).get('output', []) | join('\n')) }}</textarea>
+          </div>
+          <div>
+            <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:.2rem;">Constraints (one per line)</div>
+            <textarea id="edit-contract-constraints" class="form-control" style="min-height:40px;font-family:var(--font-mono);font-size:.8rem;">{{ (unpublished.draft_data.get('contract', {}).get('constraints', []) | join('\n')) }}</textarea>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="meta-label" style="margin-bottom:.35rem;">Implementation Source <span style="color:var(--text-muted);font-size:.78rem;">(code_block)</span></div>
+        <textarea
+          id="edit-code-block"
+          class="form-control"
+          style="min-height:280px;font-family:var(--font-mono);font-size:.82rem;white-space:pre;line-height:1.55;">{{ unpublished.draft_data.get('code_block', '') }}</textarea>
+      </div>
+
+      <div>
+        <div class="meta-label" style="margin-bottom:.4rem;">Publish Outputs</div>
+        <div style="display:flex;gap:1rem;flex-wrap:wrap;">
+          <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;">
+            <input type="checkbox" id="publish-python-artifact"
+              {% if 'python_artifact' in unpublished.draft_data.get('publish_outputs', ['python_artifact', 'text_summary']) %}checked{% endif %}>
+            <span>Python artifact</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;">
+            <input type="checkbox" id="publish-json-snapshot"
+              {% if 'json_snapshot' in unpublished.draft_data.get('publish_outputs', []) %}checked{% endif %}>
+            <span>JSON snapshot</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;">
+            <input type="checkbox" id="publish-text-summary"
+              {% if 'text_summary' in unpublished.draft_data.get('publish_outputs', ['python_artifact', 'text_summary']) %}checked{% endif %}>
+            <span>Text summary</span>
+          </label>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:.75rem;flex-wrap:wrap;align-items:center;padding-top:.25rem;border-top:1px solid var(--border);">
+        <button type="button" class="btn btn-primary" onclick="pkgSaveDraft()">Save Draft</button>
+        <button type="button" class="btn btn-ghost" onclick="pkgValidate()">Validate</button>
+        <button type="button" class="btn btn-primary" onclick="pkgPublish()">Publish to Live</button>
+        <button type="button" class="btn btn-danger" style="margin-left:auto;" onclick="pkgDiscard()">Discard Draft</button>
+      </div>
+    </div>
+  </div>
+
+  {% else %}
+  {# ── No open draft ── #}
+  <div class="card">
+    <div class="card-body" style="display:grid;gap:1rem;">
+      <div style="color:var(--text-muted);font-size:.9rem;line-height:1.6;">
+        No open draft for this capability. Propose an edit to begin a new per-capability edit.
+        Publishing a proposed edit replaces live installed truth for this capability only.
+      </div>
+      <div>
+        <button type="button" class="btn btn-primary" onclick="pkgPropose()">Propose Edit</button>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+</div>{# end unpublished tab #}
+
+{# ── Published surface ───────────────────────────────────────────────────── #}
+<div id="pkg-tab-published" class="pkg-tab-panel" style="display:none;">
+  <div class="card" style="margin-bottom:1rem;">
+    <div class="card-header">
+      <span class="card-title">Published Surface</span>
+      <span style="color:var(--text-muted);font-size:.8rem;">Installed capability truth — read only</span>
+    </div>
+    <div class="card-body" style="display:grid;gap:1rem;">
+
+      <div>
+        <div class="meta-label">Contract</div>
+        <pre style="margin-top:.35rem;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;white-space:pre-wrap;font-size:.82rem;">{{ published.contract | tojson(indent=2) }}</pre>
+      </div>
+
+      {% if published.tags %}
+      <div>
+        <div class="meta-label">Tags</div>
+        <div style="margin-top:.25rem;">
+          {% for tag in published.tags %}<span class="tag">{{ tag }}</span>{% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <div>
+        <div class="meta-label" style="margin-bottom:.25rem;">Publish Outputs Declared</div>
+        <div style="display:flex;gap:.35rem;flex-wrap:wrap;">
+          {% for form in published.publish_outputs %}
+          <span class="badge badge-inactive">{{ form }}</span>
+          {% endfor %}
+        </div>
+      </div>
+
+      {# ── Published artifact forms ── #}
+      {% if published.published_forms %}
+      <div>
+        <div class="meta-label" style="margin-bottom:.5rem;">Published Artifact Forms</div>
+        <div style="display:grid;gap:.75rem;">
+          {% for form in published.published_forms %}
+          <div style="border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;">
+              <span class="badge badge-inactive">{{ form.form_kind }}</span>
+              <span style="font-size:.75rem;color:var(--text-muted);">{{ form.created_at[:16].replace('T', ' ') }}</span>
+            </div>
+            <div class="meta-value mono" style="font-size:.75rem;word-break:break-all;color:var(--text-muted);">{{ form.artifact_path }}</div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% else %}
+      <div style="color:var(--text-muted);font-size:.85rem;">
+        No published artifact forms yet. Propose and publish an edit to generate package-owned artifacts.
+      </div>
+      {% endif %}
+
+      {% if published.code_block %}
+      <div>
+        <div class="meta-label" style="margin-bottom:.35rem;">Implementation Source</div>
+        <pre style="margin:0;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius);padding:.75rem;white-space:pre;overflow-x:auto;line-height:1.55;font-size:.8rem;">{{ published.code_block }}</pre>
+      </div>
+      {% else %}
+      <div style="color:var(--text-muted);font-size:.85rem;">No implementation source recorded. Source is resolved at runtime via binding_ref.</div>
+      {% endif %}
+
+    </div>
+  </div>
+</div>{# end published tab #}
+
+{# ── History surface ─────────────────────────────────────────────────────── #}
+<div id="pkg-tab-history" class="pkg-tab-panel" style="display:none;">
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">History</span>
+      <span style="color:var(--text-muted);font-size:.8rem;">Immutable record event ledger</span>
+    </div>
+    {% if history %}
+    <table>
+      <thead>
+        <tr>
+          <th>Event</th>
+          <th>Source</th>
+          <th>Type at Time</th>
+          <th>Execution Source</th>
+          <th>Published Forms</th>
+          <th>Recorded</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for entry in history | reverse %}
+        <tr>
+          <td>{{ entry.event_type }}</td>
+          <td class="cell-mono" style="font-size:.78rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;">
+            {{ entry.source_kind }}<br>
+            <span style="color:var(--text-muted);">{{ entry.source_ref }}</span>
+          </td>
+          <td>
+            <span class="badge {% if entry.snapshot_data.get('capability_type') == 'composite' %}badge-running{% else %}badge-inactive{% endif %}">
+              {{ entry.snapshot_data.get('capability_type', '—') }}
+            </span>
+          </td>
+          <td class="cell-mono" style="font-size:.78rem;">{{ entry.snapshot_data.get('execution_source', '—') }}</td>
+          <td class="cell-mono" style="font-size:.78rem;">
+            {% set forms = entry.snapshot_data.get('published_forms', []) %}
+            {% if forms %}{{ forms | join(', ') }}{% else %}—{% endif %}
+          </td>
+          <td class="cell-mono" style="font-size:.78rem;">{{ entry.created_at[:16].replace('T', ' ') }}</td>
+          <td>
+            <button
+              type="button"
+              class="btn btn-ghost btn-sm"
+              onclick="pkgRollback({{ entry.event_id | tojson }}, {{ entry.created_at[:10] | tojson }}, {{ entry.event_type | tojson }})">
+              Roll Back
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+      <p>No record events exist for this capability yet.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>{# end history tab #}
+
+<script>
+  (() => {
+    const capabilityId = {{ published.capability_id | tojson }};
+    const draftId = {{ (unpublished.draft_id if unpublished else None) | tojson }};
+    const draftItemId = {{ (unpublished.item_id if unpublished else None) | tojson }};
+
+    // ── Tab switching ────────────────────────────────────────────────────
+
+    window.pkgSwitchTab = function (tab) {
+      document.querySelectorAll(".pkg-tab-panel").forEach(el => el.style.display = "none");
+      document.querySelectorAll(".pkg-tab-btn").forEach(el => el.classList.remove("btn-primary"));
+      const panel = document.getElementById("pkg-tab-" + tab);
+      if (panel) panel.style.display = "";
+      const btn = document.querySelector('[data-tab="' + tab + '"]');
+      if (btn) btn.classList.add("btn-primary");
+    };
+    pkgSwitchTab("unpublished");
+
+    // ── Feedback helpers ─────────────────────────────────────────────────
+
+    function showFeedback(msg) {
+      const el = document.getElementById("pkg-feedback");
+      el.textContent = msg; el.style.display = "";
+      document.getElementById("pkg-error").style.display = "none";
+    }
+    function showError(msg) {
+      const el = document.getElementById("pkg-error");
+      el.textContent = msg; el.style.display = "";
+      document.getElementById("pkg-feedback").style.display = "none";
+    }
+    function clearMessages() {
+      document.getElementById("pkg-feedback").style.display = "none";
+      document.getElementById("pkg-error").style.display = "none";
+    }
+
+    // ── API helper ───────────────────────────────────────────────────────
+
+    async function apiFetch(method, path, body) {
+      const opts = { method, headers: { "Content-Type": "application/json" } };
+      if (body !== undefined) opts.body = JSON.stringify(body);
+      const resp = await fetch(path, opts);
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) throw new Error(data.detail || `Request failed (${resp.status})`);
+      return data;
+    }
+
+    // ── Draft data serialiser ────────────────────────────────────────────
+
+    function readDraftData() {
+      function lines(id) {
+        return (document.getElementById(id)?.value || "")
+          .split("\n").map(s => s.trim()).filter(Boolean);
+      }
+      function val(id) { return document.getElementById(id)?.value || ""; }
+      function checked(id) { return document.getElementById(id)?.checked || false; }
+
+      const publishOutputs = [];
+      if (checked("publish-python-artifact")) publishOutputs.push("python_artifact");
+      if (checked("publish-json-snapshot")) publishOutputs.push("json_snapshot");
+      if (checked("publish-text-summary")) publishOutputs.push("text_summary");
+
+      return {
+        capability_id: capabilityId,
+        display_name: val("edit-display-name"),
+        description: val("edit-description"),
+        capability_type: val("edit-capability-type"),
+        version: val("edit-version"),
+        pack_id: val("edit-pack-id"),
+        entrypoint: val("edit-entrypoint") || "run",
+        execution_source: val("edit-execution-source") || "code_block",
+        tags: lines("edit-tags"),
+        contract: {
+          inputs: lines("edit-contract-inputs"),
+          output: lines("edit-contract-output"),
+          constraints: lines("edit-contract-constraints"),
+        },
+        code_block: document.getElementById("edit-code-block")?.value || "",
+        publish_outputs: publishOutputs.length ? publishOutputs : ["python_artifact", "text_summary"],
+      };
+    }
+
+    // ── Write operations ─────────────────────────────────────────────────
+
+    window.pkgPropose = async function () {
+      clearMessages();
+      try {
+        const liveResp = await apiFetch("GET", `/api/capabilities/${encodeURIComponent(capabilityId)}`);
+        const bodyResp = await apiFetch("GET", `/api/capabilities/${encodeURIComponent(capabilityId)}/body`);
+        const draftData = {
+          capability_id: capabilityId,
+          display_name: liveResp.display_name || "",
+          description: liveResp.description || "",
+          capability_type: liveResp.capability_type || "function",
+          version: liveResp.version || "1",
+          pack_id: liveResp.pack_id || "",
+          contract: liveResp.contract || { inputs: [], output: [], constraints: [] },
+          tags: liveResp.tags || [],
+          implementation_ref: liveResp.implementation_ref || "",
+          execution_source: liveResp.execution_source || "binding_ref",
+          entrypoint: liveResp.entrypoint || "run",
+          publish_outputs: liveResp.publish_outputs || ["python_artifact", "text_summary"],
+          code_block: bodyResp.code_block || "",
+        };
+        await apiFetch("POST", `/api/capabilities/${encodeURIComponent(capabilityId)}/propose`, { draft_data: draftData });
+        showFeedback("Draft proposed. Reloading...");
+        setTimeout(() => window.location.reload(), 800);
+      } catch (err) {
+        showError(err.message || "Failed to propose edit.");
+      }
+    };
+
+    window.pkgSaveDraft = async function () {
+      if (!draftId || !draftItemId) return;
+      clearMessages();
+      const draftData = readDraftData();
+      try {
+        await apiFetch(
+          "PATCH",
+          `/api/capability-environment/drafts/${encodeURIComponent(draftId)}/items/${encodeURIComponent(draftItemId)}`,
+          { draft_data: draftData },
+        );
+        showFeedback("Draft saved.");
+      } catch (err) {
+        showError(err.message || "Failed to save draft.");
+      }
+    };
+
+    window.pkgValidate = async function () {
+      clearMessages();
+      try {
+        const result = await apiFetch("POST", `/api/capabilities/${encodeURIComponent(capabilityId)}/validate`);
+        const msg = result.failed > 0
+          ? `Validation: ${result.failed} item(s) failed.`
+          : `Validated. ${result.passed || 0} item(s) passed. Reloading...`;
+        if (result.failed > 0) { showError(msg); } else { showFeedback(msg); setTimeout(() => window.location.reload(), 800); }
+      } catch (err) {
+        showError(err.message || "Validation failed.");
+      }
+    };
+
+    window.pkgPublish = async function () {
+      clearMessages();
+      if (!window.confirm(`Publish this draft? This will replace the live installed truth for ${capabilityId}.`)) return;
+      try {
+        const result = await apiFetch("POST", `/api/capabilities/${encodeURIComponent(capabilityId)}/publish`);
+        if (result.ok === false) {
+          showError(result.error || "Publish failed.");
+        } else {
+          showFeedback(`Published. ${result.replaced_live_count || 0} record(s) replaced. Reloading...`);
+          setTimeout(() => window.location.reload(), 1200);
+        }
+      } catch (err) {
+        showError(err.message || "Publish failed.");
+      }
+    };
+
+    window.pkgDiscard = async function () {
+      clearMessages();
+      if (!window.confirm(`Discard the open draft for ${capabilityId}? This cannot be undone.`)) return;
+      try {
+        await apiFetch("DELETE", `/api/capabilities/${encodeURIComponent(capabilityId)}/draft`);
+        showFeedback("Draft discarded. Reloading...");
+        setTimeout(() => window.location.reload(), 800);
+      } catch (err) {
+        showError(err.message || "Failed to discard draft.");
+      }
+    };
+
+    window.pkgRollback = async function (eventId, date, eventType) {
+      clearMessages();
+      if (!window.confirm(
+        `Roll back ${capabilityId} to the ${eventType} snapshot from ${date}?\n\n` +
+        `This creates a new draft, validates it, and publishes it — replacing live installed truth.`
+      )) return;
+      try {
+        const result = await apiFetch(
+          "POST",
+          `/api/capabilities/${encodeURIComponent(capabilityId)}/rollback`,
+          { history_id: eventId },
+        );
+        if (result.ok === false) {
+          showError(result.error || "Rollback failed.");
+        } else {
+          showFeedback(`Rollback published. ${result.replaced_live_count || 0} record(s) replaced. Reloading...`);
+          setTimeout(() => window.location.reload(), 1200);
+        }
+      } catch (err) {
+        showError(err.message || "Rollback failed.");
+      }
+    };
+  })();
+</script>
+{% endblock %}

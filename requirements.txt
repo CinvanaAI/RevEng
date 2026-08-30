@@ -1,0 +1,14 @@
+# RevEng Control Center — web platform dependencies
+# The core RevEng analysis engine uses stdlib only and has no requirements.
+# These are needed only to run the agent platform and control center UI.
+
+fastapi>=0.111
+uvicorn[standard]>=0.29
+jinja2>=3.1
+python-multipart>=0.0.9
+
+# Optional desktop shell (not needed for server.py)
+pywebview>=5.0
+
+# Icon-generation helper used by the PyInstaller build recipe
+Pillow>=10.0

@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agent Environment - RevEng</title>
+  <link rel="stylesheet" href="/static/app.css">
+  <link rel="stylesheet" href="/static/agent_environment.css">
+</head>
+<body class="agent-env-place-body agent-env-place-body--hall">
+  <div class="agent-env-place-app agent-env-place-app--hall">
+    <header class="agent-env-place-hud">
+      <a href="/agents" class="agent-env-place-exit">
+        <span class="agent-env-kicker">Exit</span>
+        <strong>Control Center</strong>
+      </a>
+      <div class="agent-env-place-heading">
+        <span class="agent-env-kicker">Agent Environment</span>
+        <h1>{{ theme.stage_title }}</h1>
+        <p>Browse one chamber at a time, search the roster, then enter the selected agent's deeper space.</p>
+      </div>
+      <div class="agent-env-place-actions">
+        <a href="/agents" class="btn btn-sm">Agents Admin</a>
+        <a href="{{ environment_settings_href }}" class="btn btn-sm">Theme Assets</a>
+      </div>
+    </header>
+
+    {% if page_notice or page_error %}
+    <div class="agent-env-place-flash {% if page_error %}is-error{% else %}is-notice{% endif %}">
+      {{ page_error or page_notice }}
+    </div>
+    {% endif %}
+
+    <div class="agent-env-place-chip-row">
+      <span class="agent-env-place-chip"><span class="agent-env-place-chip-label">Agents</span><strong>{{ hall_stats.total_agents }}</strong></span>
+      <span class="agent-env-place-chip"><span class="agent-env-place-chip-label">Active</span><strong>{{ hall_stats.active_agents }}</strong></span>
+      <span class="agent-env-place-chip agent-env-place-chip--selected"><span class="agent-env-place-chip-label">Shared {{ theme.display_name }} Backgrounds</span><strong>{{ hall_stats.shared_background_count }}</strong></span>
+    </div>
+
+    {% if featured_agent %}
+    <main class="agent-env-hall-main">
+      <section class="agent-env-hall-stage {% if featured_stage.background_url %}has-scene{% endif %}"
+               {% if featured_stage.background_url %}style="--agent-hall-stage-image: url('{{ featured_stage.background_url }}');"{% endif %}
+               data-prev-href="{{ hall_prev_href }}"
+               data-next-href="{{ hall_next_href }}"
+               data-enter-href="{{ featured_enter_href }}">
+        <a href="{{ hall_prev_href }}" class="agent-env-hall-arrow is-left" aria-label="Previous agent">
+          <span aria-hidden="true">&#8249;</span>
+        </a>
+        <a href="{{ hall_next_href }}" class="agent-env-hall-arrow is-right" aria-label="Next agent">
+          <span aria-hidden="true">&#8250;</span>
+        </a>
+
+        <div class="agent-env-hall-toolbar">
+          <div class="agent-env-hall-counter">
+            <span class="agent-env-kicker">Chamber</span>
+            <strong>{{ featured_index }} / {{ featured_total }}</strong>
+          </div>
+          <div class="agent-env-jump-shell" data-jump-shell>
+            <form class="agent-env-jump-form" data-jump-form>
+              <input type="search"
+                     class="input agent-env-jump-input"
+                     placeholder="Search agents by name"
+                     aria-label="Search agents by name"
+                     data-agent-search>
+              <button type="button" class="btn btn-ghost btn-sm" data-jump-toggle>Jump List</button>
+            </form>
+            <div class="agent-env-jump-panel" hidden data-jump-panel>
+              <div class="agent-env-jump-panel-head">
+                <span class="agent-env-kicker">Quick Jump</span>
+                <button type="button" class="btn btn-ghost btn-sm" data-jump-close>Close</button>
+              </div>
+              <div class="agent-env-jump-list" data-jump-list>
+                {% for row in hall_jump_rows %}
+                <a href="{{ row.href }}"
+                   class="agent-env-jump-row {% if row.is_current %}is-current{% endif %}"
+                   data-agent-jump-row
+                   data-agent-name="{{ row.agent.name|lower }}">
+                  <div>
+                    <strong>{{ row.agent.name }}</strong>
+                    <div class="agent-env-inline-hint">{{ row.agent.description or "No agent description recorded." }}</div>
+                  </div>
+                  <div class="agent-env-jump-row-meta">
+                    <span class="badge {% if row.agent.is_active %}badge-active{% else %}badge-inactive{% endif %}">{{ "active" if row.agent.is_active else "inactive" }}</span>
+                    <span class="agent-env-meta-chip">{{ row.tool_count }} tools</span>
+                  </div>
+                </a>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <a href="{{ featured_enter_href }}" class="agent-env-hall-stage-hit" aria-label="Enter {{ featured_agent.name }} chamber"></a>
+
+        <div class="agent-env-chamber-shell">
+          <div class="agent-env-chamber-scene">
+            <div class="agent-env-chamber-occupant">
+              <span>{{ featured_initials }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="agent-env-hall-overlay">
+          <div class="agent-env-hall-copy">
+            <span class="agent-env-kicker">{{ theme.display_name }} {{ theme.chamber_label }}</span>
+            <h2>{{ featured_agent.name }}</h2>
+            <p>{{ featured_spec.identity.description or "No agent description recorded yet." }}</p>
+          </div>
+          <div class="agent-env-hall-meta">
+            <span class="badge {% if featured_agent.is_active %}badge-active{% else %}badge-inactive{% endif %}">{{ "active" if featured_agent.is_active else "inactive" }}</span>
+            <span class="agent-env-meta-chip">{{ featured_provider.label if featured_provider else featured_spec.tool_access.provider_id }}</span>
+            <span class="agent-env-meta-chip cell-mono">{{ featured_spec.tool_access.model }}</span>
+            <span class="agent-env-meta-chip">{{ featured_tool_count }} granted tools</span>
+            <span class="agent-env-meta-chip">{{ featured_file_count }} visible files</span>
+            <span class="agent-env-meta-chip">
+              {% if featured_stage.selection_source == "custom" %}
+              Custom background
+              {% elif featured_stage.selection_source == "shared" %}
+              Fixed shared background
+              {% else %}
+              Default / Random
+              {% endif %}
+            </span>
+          </div>
+          <div class="agent-env-hall-actions">
+            <a href="{{ featured_enter_href }}" class="btn btn-primary">Enter Chamber</a>
+            <a href="{{ featured_admin_href }}" class="btn btn-ghost">Inspect in Admin</a>
+          </div>
+        </div>
+      </section>
+    </main>
+    {% else %}
+    <main class="agent-env-hall-main">
+      <section class="agent-env-hall-stage agent-env-hall-stage--empty">
+        <div class="agent-env-empty agent-env-empty--bay">
+          <span class="agent-env-kicker">Agent Environment</span>
+          <h2>No chambers exist yet</h2>
+          <p>Create the first agent in admin, then return here to browse chambers one at a time.</p>
+          <div class="agent-env-hall-actions">
+            <a href="{{ new_agent_href }}" class="btn btn-primary">Create First Agent</a>
+            <a href="{{ agents_admin_href }}" class="btn btn-ghost">Open Agents Admin</a>
+          </div>
+        </div>
+      </section>
+    </main>
+    {% endif %}
+  </div>
+
+  {% if featured_agent %}
+  <script>
+    (() => {
+      const stage = document.querySelector(".agent-env-hall-stage");
+      const searchInput = document.querySelector("[data-agent-search]");
+      const jumpToggle = document.querySelector("[data-jump-toggle]");
+      const jumpClose = document.querySelector("[data-jump-close]");
+      const jumpPanel = document.querySelector("[data-jump-panel]");
+      const jumpRows = Array.from(document.querySelectorAll("[data-agent-jump-row]"));
+
+      function visibleRows() {
+        return jumpRows.filter((row) => !row.hidden);
+      }
+
+      function filterRows() {
+        const query = (searchInput?.value || "").trim().toLowerCase();
+        jumpRows.forEach((row) => {
+          row.hidden = query.length > 0 && !row.dataset.agentName.includes(query);
+        });
+      }
+
+      function openPanel() {
+        if (jumpPanel) {
+          jumpPanel.hidden = false;
+        }
+      }
+
+      function closePanel() {
+        if (jumpPanel) {
+          jumpPanel.hidden = true;
+        }
+      }
+
+      searchInput?.addEventListener("focus", () => {
+        openPanel();
+        filterRows();
+      });
+
+      searchInput?.addEventListener("input", () => {
+        openPanel();
+        filterRows();
+      });
+
+      document.querySelector("[data-jump-form]")?.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const target = visibleRows()[0];
+        if (target) {
+          window.location.href = target.href;
+        }
+      });
+
+      jumpToggle?.addEventListener("click", () => {
+        const isHidden = jumpPanel?.hidden !== false;
+        if (isHidden) {
+          openPanel();
+          searchInput?.focus();
+          filterRows();
+        } else {
+          closePanel();
+        }
+      });
+
+      jumpClose?.addEventListener("click", closePanel);
+
+      document.addEventListener("click", (event) => {
+        if (!jumpPanel || jumpPanel.hidden) {
+          return;
+        }
+        const jumpShell = document.querySelector("[data-jump-shell]");
+        if (jumpShell && !jumpShell.contains(event.target)) {
+          closePanel();
+        }
+      });
+
+      document.addEventListener("keydown", (event) => {
+        const activeTag = document.activeElement?.tagName;
+        const typing = activeTag === "INPUT" || activeTag === "TEXTAREA";
+        if ((event.key === "/" || ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k")) && !typing) {
+          event.preventDefault();
+          openPanel();
+          searchInput?.focus();
+          return;
+        }
+        if (typing) {
+          return;
+        }
+        if (event.key === "ArrowLeft" && stage?.dataset.prevHref) {
+          window.location.href = stage.dataset.prevHref;
+        } else if (event.key === "ArrowRight" && stage?.dataset.nextHref) {
+          window.location.href = stage.dataset.nextHref;
+        } else if (event.key === "Enter" && stage?.dataset.enterHref) {
+          window.location.href = stage.dataset.enterHref;
+        } else if (event.key === "Escape") {
+          closePanel();
+        }
+      });
+    })();
+  </script>
+  {% endif %}
+</body>
+</html>

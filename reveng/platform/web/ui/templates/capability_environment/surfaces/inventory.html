@@ -1,0 +1,179 @@
+<div class="cap-env-surface-stack">
+  <section class="cap-env-surface-card cap-env-surface-card--accent">
+    <span class="cap-env-card-label">Platform Inventory</span>
+    <h3>Existing inventory list, unchanged in meaning</h3>
+    <p>
+      This is the current read-only inventory list view. Use it to inspect live platform truth, then copy
+      a capability into a new environment draft only if you explicitly choose to do so.
+    </p>
+  </section>
+
+  <section class="cap-env-surface-card">
+    <div class="cap-env-surface-card-head">
+      <div>
+        <span class="cap-env-card-label">Inventory Wall</span>
+        <h3>{{ installed|length }} installed capability{{ 'ies' if installed|length != 1 else 'y' }}</h3>
+      </div>
+      <span class="cap-env-pill">Read-only platform truth</span>
+    </div>
+
+    {% if installed %}
+    <div class="cap-env-table-wrap">
+      <table class="cap-env-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Display Name</th>
+            <th>Type</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for cap in installed %}
+          <tr>
+            <td class="cell-mono">{{ cap.capability_id }}</td>
+            <td>
+              <strong>{{ cap.display_name }}</strong>
+              <div class="cap-env-inline-hint">{{ cap.description or "No description recorded." }}</div>
+            </td>
+            <td>
+              <span class="badge {% if cap.capability_type == 'composite' %}badge-running{% else %}badge-inactive{% endif %}">
+                {{ cap.capability_type }}
+              </span>
+            </td>
+            <td class="cap-env-table-actions">
+              <button
+                type="button"
+                class="btn btn-sm"
+                onclick="openCapabilityDetail({{ cap.capability_id|tojson }})">
+                Inspect
+              </button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="cap-env-empty-state">
+      <p>No installed capabilities are currently visible.</p>
+    </div>
+    {% endif %}
+  </section>
+
+  <dialog id="inventory-dialog" class="cap-env-dialog">
+    <form method="dialog" class="cap-env-dialog-shell">
+      <header class="cap-env-dialog-head">
+        <div>
+          <span class="cap-env-card-label">Inventory Wall</span>
+          <h3>Installed Capability</h3>
+        </div>
+        <button type="submit" class="cap-env-dialog-close" aria-label="Close installed capability dialog">Close</button>
+      </header>
+
+      <div class="cap-env-dialog-body">
+        <div class="cap-env-surface-card cap-env-surface-card--inset">
+          <span class="cap-env-card-label">Capability ID</span>
+          <div id="modal-cap-id" class="cap-env-mono-block"></div>
+        </div>
+
+        <div class="cap-env-two-col">
+          <div class="cap-env-surface-card cap-env-surface-card--inset">
+            <span class="cap-env-card-label">Lifecycle</span>
+            <div id="modal-lifecycle"></div>
+          </div>
+          <div class="cap-env-surface-card cap-env-surface-card--inset">
+            <span class="cap-env-card-label">Type</span>
+            <div id="modal-type"></div>
+          </div>
+        </div>
+
+        <div class="cap-env-two-col">
+          <div class="cap-env-surface-card cap-env-surface-card--inset">
+            <span class="cap-env-card-label">Display Name</span>
+            <div id="modal-display-name"></div>
+          </div>
+          <div class="cap-env-surface-card cap-env-surface-card--inset">
+            <span class="cap-env-card-label">Version</span>
+            <div id="modal-version" class="cap-env-mono-block"></div>
+          </div>
+        </div>
+
+        <div class="cap-env-surface-card cap-env-surface-card--inset">
+          <span class="cap-env-card-label">Description</span>
+          <div id="modal-description" class="cap-env-inline-hint"></div>
+        </div>
+
+        <div class="cap-env-two-col">
+          <div class="cap-env-surface-card cap-env-surface-card--inset">
+            <span class="cap-env-card-label">Pack</span>
+            <div id="modal-pack" class="cap-env-mono-block"></div>
+          </div>
+          <div class="cap-env-surface-card cap-env-surface-card--inset">
+            <span class="cap-env-card-label">Source</span>
+            <div id="modal-source" class="cap-env-mono-block"></div>
+          </div>
+        </div>
+
+        <div class="cap-env-two-col">
+          <div class="cap-env-surface-card cap-env-surface-card--inset">
+            <span class="cap-env-card-label">Tags</span>
+            <div id="modal-tags"></div>
+          </div>
+          <div class="cap-env-surface-card cap-env-surface-card--inset">
+            <span class="cap-env-card-label">Bindings</span>
+            <div id="modal-bindings" class="cap-env-mono-block"></div>
+          </div>
+        </div>
+
+        <div class="cap-env-two-col">
+          <div class="cap-env-surface-card cap-env-surface-card--inset">
+            <span class="cap-env-card-label">Component Capabilities</span>
+            <div id="modal-components" class="cap-env-mono-block"></div>
+          </div>
+          <div class="cap-env-surface-card cap-env-surface-card--inset">
+            <span class="cap-env-card-label">Execution Order</span>
+            <div id="modal-execution-order" class="cap-env-mono-block"></div>
+          </div>
+        </div>
+
+        <div class="cap-env-two-col">
+          <div class="cap-env-surface-card cap-env-surface-card--inset">
+            <span class="cap-env-card-label">Package Object</span>
+            <div id="modal-package-object" class="cap-env-mono-block"></div>
+          </div>
+          <div class="cap-env-surface-card cap-env-surface-card--inset">
+            <span class="cap-env-card-label">Package Snapshot Time</span>
+            <div id="modal-package-created" class="cap-env-mono-block"></div>
+          </div>
+        </div>
+
+        <div class="cap-env-surface-card cap-env-surface-card--inset">
+          <div class="cap-env-surface-card-head">
+            <div>
+              <span class="cap-env-card-label">Record Events</span>
+              <h3>Stored capability record history</h3>
+            </div>
+          </div>
+          <div id="modal-record-events" class="cap-env-inline-hint"></div>
+        </div>
+
+        <div class="cap-env-surface-card cap-env-surface-card--accent">
+          <span class="cap-env-card-label">Boundary Notice</span>
+          <p>
+            This installed capability is live platform truth. Inventory Wall can inspect stored record detail
+            and history, but it cannot edit or replace live truth here. It can only hand off into a new draft.
+          </p>
+        </div>
+      </div>
+
+      <footer class="cap-env-dialog-actions">
+        <button type="submit" class="btn">Close</button>
+        <a id="modal-view-package-btn" href="#" class="btn btn-ghost" data-cap-env-leave="true">View Package</a>
+        <button type="button" id="modal-create-draft-btn" class="btn btn-primary" onclick="createDraftFromCapability()">
+          Copy into new draft
+        </button>
+      </footer>
+    </form>
+  </dialog>
+</div>

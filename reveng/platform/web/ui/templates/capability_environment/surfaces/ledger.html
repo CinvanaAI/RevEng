@@ -1,0 +1,268 @@
+<div class="cap-env-surface-stack">
+  <section class="cap-env-surface-card cap-env-surface-card--accent">
+    <span class="cap-env-card-label">Workshop Records</span>
+    <h3>Use only the ledger information the environment actually owns</h3>
+    <p>
+      This surface shows existing draft records and publication history already tracked by the environment.
+      It does not invent ancestry, revision trees, or hidden version semantics.
+    </p>
+  </section>
+
+  {% if station_draft %}
+  <section class="cap-env-surface-card">
+    <div class="cap-env-surface-card-head">
+      <div>
+        <span class="cap-env-card-label">Selected Draft</span>
+        <h3>{{ station_draft.name }}</h3>
+      </div>
+      <div class="cap-env-pill-row">
+        <span class="badge {% if station_draft.lifecycle_state == 'published' %}badge-completed{% elif station_draft.lifecycle_state == 'retired' %}badge-inactive{% else %}badge-running{% endif %}">
+          {{ station_draft.lifecycle_state }}
+        </span>
+        <span class="cap-env-pill">v{{ station_draft.version }}</span>
+      </div>
+    </div>
+
+    <div class="cap-env-detail-grid">
+      <div>
+        <span class="cap-env-card-label">Description</span>
+        <p>{{ station_draft.description or "No draft description recorded." }}</p>
+      </div>
+      <div>
+        <span class="cap-env-card-label">Saved Versions</span>
+        <p>{{ station_draft_revisions|length }} record{{ 's' if station_draft_revisions|length != 1 else '' }}</p>
+      </div>
+      <div>
+        <span class="cap-env-card-label">Publication Records</span>
+        <p>{{ station_draft_history|length }} record{{ 's' if station_draft_history|length != 1 else '' }}</p>
+      </div>
+      <div>
+        <span class="cap-env-card-label">Platform Candidates</span>
+        <p>{{ station_draft_publication_candidates|length }} record{{ 's' if station_draft_publication_candidates|length != 1 else '' }}</p>
+      </div>
+    </div>
+
+    <div class="cap-env-surface-card cap-env-surface-card--inset">
+      <span class="cap-env-card-label">Rollback Rule</span>
+      <p>
+        Ledger rollback does not hand-edit live truth. It rebuilds a rollback draft from an existing
+        stored revision or publication record, validates it, and republishes it through the same
+        platform-owned install path.
+      </p>
+    </div>
+
+    <div id="ledger-feedback" class="cap-env-inline-hint" aria-live="polite"></div>
+    <div id="ledger-error" class="alert alert-error" hidden></div>
+  </section>
+
+  <section class="cap-env-surface-card">
+    <div class="cap-env-surface-card-head">
+      <div>
+        <span class="cap-env-card-label">Saved Versions</span>
+        <h3>Workbench version history for {{ station_draft.name }}</h3>
+      </div>
+      {% if current_draft %}
+      <a href="{{ station_urls.dispatch_bench }}" class="btn btn-sm" data-cap-env-leave="true">Open Dispatch Bench</a>
+      {% endif %}
+    </div>
+
+    {% if station_draft_revisions %}
+    <div class="cap-env-table-wrap">
+      <table class="cap-env-table">
+        <thead>
+          <tr>
+            <th>Version</th>
+            <th>Items</th>
+            <th>Saved</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for record in station_draft_revisions %}
+          <tr>
+            <td class="cell-mono">{{ record.version }}</td>
+            <td>{{ record.item_count }}</td>
+            <td class="cell-mono">{{ record.saved_at[:16] }}</td>
+            <td class="cap-env-table-actions">
+              <button
+                type="button"
+                class="btn btn-sm"
+                data-rollback-url="/api/capability-environment/drafts/{{ station_draft.id }}/rollback/revisions/{{ record.id }}"
+                onclick="ledgerRollbackRevision(this.dataset.rollbackUrl, '{{ record.version }}')">
+                Restore Live
+              </button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="cap-env-empty-state">
+      <p>No saved workbench versions are recorded for this draft yet.</p>
+    </div>
+    {% endif %}
+  </section>
+
+  <section class="cap-env-surface-card">
+    <div class="cap-env-surface-card-head">
+      <div>
+        <span class="cap-env-card-label">Inspect Lineage</span>
+        <h3>Publication history for {{ station_draft.name }}</h3>
+      </div>
+      {% if current_draft %}
+      <a href="{{ station_urls.dispatch_bench }}" class="btn btn-sm" data-cap-env-leave="true">Open Dispatch Bench</a>
+      {% endif %}
+    </div>
+
+    {% if station_draft_history %}
+    <div class="cap-env-table-wrap">
+      <table class="cap-env-table">
+        <thead>
+          <tr>
+            <th>Version</th>
+            <th>Items</th>
+            <th>Published</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for record in station_draft_history %}
+          <tr>
+            <td class="cell-mono">{{ record.version }}</td>
+            <td>{{ record.item_count }}</td>
+            <td class="cell-mono">{{ record.published_at[:16] }}</td>
+            <td class="cap-env-table-actions">
+              <button
+                type="button"
+                class="btn btn-sm"
+                data-rollback-url="/api/capability-environment/drafts/{{ station_draft.id }}/rollback/publications/{{ record.id }}"
+                onclick="ledgerRollbackPublication(this.dataset.rollbackUrl, '{{ record.version }}')">
+                Republish Live
+              </button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="cap-env-empty-state">
+      <p>No publication marks are recorded for this draft yet.</p>
+    </div>
+    {% endif %}
+  </section>
+
+  <section class="cap-env-surface-card">
+    <div class="cap-env-surface-card-head">
+      <div>
+        <span class="cap-env-card-label">Platform Publication Candidates</span>
+        <h3>Stored candidate records for {{ station_draft.name }}</h3>
+      </div>
+    </div>
+
+    <div class="cap-env-surface-card cap-env-surface-card--inset">
+      <span class="cap-env-card-label">Boundary Notice</span>
+      <p>
+        These records show what Dispatch Bench has published into platform-owned candidate storage.
+        They are durable evidence of publication readiness, not live installed capabilities.
+      </p>
+    </div>
+
+    {% if station_draft_publication_candidates %}
+    <div class="cap-env-table-wrap">
+      <table class="cap-env-table">
+        <thead>
+          <tr>
+            <th>Capability</th>
+            <th>Version</th>
+            <th>Ready</th>
+            <th>Candidate State</th>
+            <th>Recorded</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for record in station_draft_publication_candidates %}
+          <tr>
+            <td class="cell-mono">{{ record.capability_id }}</td>
+            <td class="cell-mono">{{ record.version }}</td>
+            <td>
+              <span class="badge {% if record.executable_ready %}badge-completed{% else %}badge-inactive{% endif %}">
+                {{ "ready" if record.executable_ready else "incomplete" }}
+              </span>
+            </td>
+            <td class="cell-mono">{{ record.publication_state }}</td>
+            <td class="cell-mono">{{ record.created_at[:16] }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="cap-env-empty-state">
+      <p>No platform publication candidates are recorded for this draft yet.</p>
+    </div>
+    {% endif %}
+  </section>
+  {% endif %}
+
+  <section class="cap-env-surface-card">
+    <div class="cap-env-surface-card-head">
+      <div>
+        <span class="cap-env-card-label">Draft Records</span>
+        <h3>Select a draft record to inspect</h3>
+      </div>
+    </div>
+
+    {% if drafts %}
+    <div class="cap-env-table-wrap">
+      <table class="cap-env-table">
+        <thead>
+          <tr>
+            <th>Draft</th>
+            <th>State</th>
+            <th>Version</th>
+            <th>Updated</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for record in drafts %}
+          <tr>
+            <td>
+              <strong>{{ record.name }}</strong>
+              <div class="cap-env-inline-hint">{{ record.description or "No draft description yet." }}</div>
+            </td>
+            <td>
+              <span class="badge {% if record.lifecycle_state == 'published' %}badge-completed{% elif record.lifecycle_state == 'retired' %}badge-inactive{% else %}badge-running{% endif %}">
+                {{ record.lifecycle_state }}
+              </span>
+            </td>
+            <td class="cell-mono">{{ record.version }}</td>
+            <td class="cell-mono">{{ record.updated_at[:16] }}</td>
+            <td class="cap-env-table-actions">
+              {% if current_draft %}
+              <a
+                href="{{ draft_station_urls[record.id].ledger }}"
+                class="btn btn-sm"
+                data-cap-env-leave="true">
+                Open Ledger
+              </a>
+              {% else %}
+              <a href="{{ draft_station_urls[record.id].ledger }}" class="btn btn-sm" data-cap-env-leave="true">
+                Open Ledger
+              </a>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="cap-env-empty-state">
+      <p>No workshop records are available yet because no drafts exist.</p>
+    </div>
+    {% endif %}
+  </section>
+</div>

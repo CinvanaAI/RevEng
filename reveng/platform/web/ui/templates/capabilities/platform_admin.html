@@ -1,0 +1,222 @@
+{% extends "base.html" %}
+
+{% block title %}Capability Platform — Admin — RevEng{% endblock %}
+{% block page_title %}Capability Platform{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ workspace_href }}" class="btn btn-ghost">Workspace</a>
+  <a href="/capabilities" class="btn btn-ghost">Capabilities</a>
+{% endblock %}
+
+{% block content %}
+{% if page_error %}
+<div class="alert alert-error">{{ page_error }}</div>
+{% endif %}
+
+<div style="color:var(--text-muted);font-size:.85rem;margin-bottom:1.5rem;">
+  Read-only observability panel for Capability Platform mechanics. Not editable.
+</div>
+
+{# ── Source Registrations ────────────────────────────────────────────────── #}
+<div class="card" style="margin-bottom:1.5rem;">
+  <div class="card-header">
+    <span class="card-title">Source Registrations</span>
+    <span style="color:var(--text-muted);font-size:.8rem;">Active capability pack sources</span>
+  </div>
+  {% if source_registrations %}
+  <table>
+    <thead>
+      <tr>
+        <th>Source Ref</th>
+        <th>Kind</th>
+        <th>Module Path</th>
+        <th>Active</th>
+        <th>Registered</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for reg in source_registrations %}
+      <tr>
+        <td class="cell-mono" style="font-size:.78rem;">{{ reg.source_ref }}</td>
+        <td><span class="badge badge-inactive">{{ reg.source_kind }}</span></td>
+        <td class="cell-mono" style="font-size:.75rem;color:var(--text-muted);">{{ reg.module_path or "—" }}</td>
+        <td>
+          {% if reg.is_active %}
+          <span class="badge badge-completed">active</span>
+          {% else %}
+          <span class="badge badge-inactive">inactive</span>
+          {% endif %}
+        </td>
+        <td class="cell-mono" style="font-size:.78rem;">{{ reg.registered_at[:16].replace('T', ' ') }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state"><p>No source registrations found.</p></div>
+  {% endif %}
+</div>
+
+{# ── Published Forms Catalog ─────────────────────────────────────────────── #}
+<div class="card" style="margin-bottom:1.5rem;">
+  <div class="card-header">
+    <span class="card-title">Published Forms Catalog</span>
+    <span style="color:var(--text-muted);font-size:.8rem;">Package-owned artifact forms — aggregated by kind</span>
+  </div>
+  {% if published_forms_catalog %}
+  <table>
+    <thead>
+      <tr>
+        <th>Form Kind</th>
+        <th>Count</th>
+        <th>Last Generated</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in published_forms_catalog %}
+      <tr>
+        <td><span class="badge badge-inactive">{{ row.form_kind }}</span></td>
+        <td>{{ row.form_count }}</td>
+        <td class="cell-mono" style="font-size:.78rem;">{{ row.last_generated[:16].replace('T', ' ') if row.last_generated else "—" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state"><p>No published forms generated yet.</p></div>
+  {% endif %}
+</div>
+
+{# ── Publish Pipeline Log ─────────────────────────────────────────────────── #}
+<div class="card" style="margin-bottom:1.5rem;">
+  <div class="card-header">
+    <span class="card-title">Publish Pipeline Log</span>
+    <span style="color:var(--text-muted);font-size:.8rem;">capability_publication_candidates — recent 50</span>
+  </div>
+  {% if publication_pipeline %}
+  <table>
+    <thead>
+      <tr>
+        <th>History ID</th>
+        <th>State</th>
+        <th>Executable Ready</th>
+        <th>Created</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in publication_pipeline %}
+      <tr>
+        <td class="cell-mono" style="font-size:.75rem;">{{ row.history_id[:16] }}…</td>
+        <td><span class="badge {% if row.publication_state == 'installed' %}badge-completed{% else %}badge-inactive{% endif %}">{{ row.publication_state }}</span></td>
+        <td>{{ "yes" if row.executable_ready else "no" }}</td>
+        <td class="cell-mono" style="font-size:.78rem;">{{ row.created_at[:16].replace('T', ' ') }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state"><p>No publication pipeline entries found.</p></div>
+  {% endif %}
+</div>
+
+{# ── Entrypoint Registry ─────────────────────────────────────────────────── #}
+<div class="card" style="margin-bottom:1.5rem;">
+  <div class="card-header">
+    <span class="card-title">Entrypoint Registry</span>
+    <span style="color:var(--text-muted);font-size:.8rem;">Declared entrypoints across installed capabilities</span>
+  </div>
+  {% if entrypoint_registry %}
+  <table>
+    <thead>
+      <tr>
+        <th>Entrypoint</th>
+        <th>Capability Count</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in entrypoint_registry %}
+      <tr>
+        <td class="cell-mono">{{ row.entrypoint }}</td>
+        <td>{{ row.capability_count }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state"><p>No installed capabilities found.</p></div>
+  {% endif %}
+</div>
+
+{# ── Record Event Summary ─────────────────────────────────────────────────── #}
+<div class="card" style="margin-bottom:1.5rem;">
+  <div class="card-header">
+    <span class="card-title">Record Event Summary</span>
+    <span style="color:var(--text-muted);font-size:.8rem;">Aggregate event counts by type</span>
+  </div>
+  {% if event_summary %}
+  <table>
+    <thead>
+      <tr>
+        <th>Event Type</th>
+        <th>Count</th>
+        <th>Last Seen</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in event_summary %}
+      <tr>
+        <td class="cell-mono">{{ row.event_type }}</td>
+        <td>{{ row.event_count }}</td>
+        <td class="cell-mono" style="font-size:.78rem;">{{ row.last_at[:16].replace('T', ' ') if row.last_at else "—" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state"><p>No record events found.</p></div>
+  {% endif %}
+</div>
+
+{# ── Surface Policies (Gates) ─────────────────────────────────────────────── #}
+<div class="card" style="margin-bottom:1.5rem;">
+  <div class="card-header">
+    <span class="card-title">Surface Policies</span>
+    <span style="color:var(--text-muted);font-size:.8rem;">Gating semantic layer — capability_surface_policies</span>
+  </div>
+  {% if surface_policies %}
+  <table>
+    <thead>
+      <tr>
+        <th>Capability</th>
+        <th>Surface</th>
+        <th>Consumer</th>
+        <th>Policy</th>
+        <th>Notes</th>
+        <th>Created</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in surface_policies %}
+      <tr>
+        <td class="cell-mono" style="font-size:.78rem;">{{ row.capability_id or "(platform-wide)" }}</td>
+        <td class="cell-mono" style="font-size:.78rem;">{{ row.surface_name }}</td>
+        <td>{{ row.consumer_kind }}</td>
+        <td>
+          <span class="badge {% if row.access_policy == 'allow' %}badge-completed{% elif row.access_policy == 'deny' %}badge-danger{% else %}badge-inactive{% endif %}">
+            {{ row.access_policy }}
+          </span>
+        </td>
+        <td style="font-size:.78rem;color:var(--text-muted);">{{ row.notes or "—" }}</td>
+        <td class="cell-mono" style="font-size:.78rem;">{{ row.created_at[:16].replace('T', ' ') }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state">
+    <p>No surface policies defined. All surfaces are open by default.</p>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}

@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% set active_nav = "agents" %}
+
+{% block title %}Edit {{ agent.name }} — RevEng{% endblock %}
+{% block page_title %}Edit Agent{% endblock %}
+
+{% block topbar_actions %}
+  <a href="/agents/{{ agent.id }}" class="btn btn-ghost">← Back</a>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:680px;">
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">{{ agent.name }}</span>
+      {% if agent.is_active %}
+        <span class="badge badge-active">Active</span>
+      {% else %}
+        <span class="badge badge-inactive">Inactive</span>
+      {% endif %}
+    </div>
+    <div class="card-body">
+
+      <form method="post" action="/agents/{{ agent.id }}/edit">
+
+        <div class="form-group">
+          <label class="form-label" for="name">Name *</label>
+          <input class="form-control" id="name" name="name" type="text"
+                 value="{{ agent.name }}" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="description">Description</label>
+          <input class="form-control" id="description" name="description" type="text"
+                 value="{{ agent.description }}">
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+          <div class="form-group">
+            <label class="form-label" for="provider_id">Provider *</label>
+            <select class="form-control" id="provider_id" name="provider_id" required>
+              {% for p in providers %}
+              <option value="{{ p.id }}" {% if p.id == agent.provider_id %}selected{% endif %}>
+                {{ p.label }} ({{ p.kind }})
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="model">Model *</label>
+            <input class="form-control" id="model" name="model" type="text"
+                   value="{{ agent.model }}" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="system_prompt">System Prompt</label>
+          <textarea class="form-control" id="system_prompt" name="system_prompt"
+                    rows="8">{{ agent.system_prompt }}</textarea>
+        </div>
+
+        <div class="alert alert-info" style="margin:0 0 1.25rem;">
+          Tool assignment now lives in Agent Environment. Use that environment's Tools Station to grant
+          or revoke installed capability packages for this agent.
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Save Changes</button>
+          <a href="/agents/{{ agent.id }}" class="btn btn-ghost">Cancel</a>
+        </div>
+
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,54 @@
+<script>
+  (() => {
+    const form = document.getElementById("forge-draft-form");
+    if (!form) return;
+
+    const submitButton = document.getElementById("forge-submit");
+    const errorBox = document.getElementById("forge-error");
+    window.capEnvWireDirtyScope("forge", form);
+
+    function showError(message) {
+      errorBox.hidden = false;
+      errorBox.textContent = message;
+    }
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      errorBox.hidden = true;
+
+      const name = document.getElementById("forge-name").value.trim();
+      const description = document.getElementById("forge-description").value.trim();
+
+      if (!name) {
+        showError("Draft name is required.");
+        return;
+      }
+
+      submitButton.disabled = true;
+      submitButton.textContent = "Creating...";
+
+      try {
+        const response = await fetch("/api/capability-environment/stations/create-draft", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({name, description}),
+        });
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({}));
+          throw new Error(error.detail || `Draft creation failed (${response.status}).`);
+        }
+
+        const draft = await response.json();
+        window.capEnvSetScopeDirty("forge", false);
+        window.location.href = window.capEnvBuildEnvironmentUrl({
+          station: "workbench",
+          draft: draft.id,
+        });
+      } catch (error) {
+        showError(error.message || "Draft creation failed.");
+        submitButton.disabled = false;
+        submitButton.textContent = "Create Draft";
+      }
+    });
+  })();
+</script>

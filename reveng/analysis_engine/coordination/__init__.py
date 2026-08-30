@@ -1,0 +1,1 @@
+"""Legacy pipeline coordination: orchestrator."""

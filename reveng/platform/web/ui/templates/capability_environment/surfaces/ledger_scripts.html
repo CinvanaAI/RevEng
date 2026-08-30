@@ -1,0 +1,67 @@
+<script>
+  (() => {
+    const feedback = document.getElementById("ledger-feedback");
+    const errorBox = document.getElementById("ledger-error");
+    function clearMessages() {
+      if (feedback) {
+        feedback.textContent = "";
+      }
+      if (errorBox) {
+        errorBox.hidden = true;
+        errorBox.textContent = "";
+      }
+    }
+
+    function showError(message) {
+      if (!errorBox) return;
+      errorBox.hidden = false;
+      errorBox.textContent = message;
+    }
+
+    function rollbackRedirectUrl(rollbackDraftId) {
+      return window.capEnvBuildEnvironmentUrl({
+        station: "ledger",
+        draft: rollbackDraftId,
+      });
+    }
+
+    async function handleRollback(response, fallbackMessage) {
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        const detail = error.detail || {};
+        showError(detail.error || fallbackMessage || `Rollback failed (${response.status}).`);
+        return;
+      }
+
+      const result = await response.json();
+      if (feedback) {
+        feedback.textContent = `Rollback republish completed. Restored version ${result.rollback_source_version || "unknown"} and reopening its ledger record...`;
+      }
+      window.location.href = rollbackRedirectUrl(result.rollback_draft_id);
+    }
+
+    window.ledgerRollbackRevision = async function (rollbackUrl, versionLabel) {
+      if (!window.confirm(`Restore saved version ${versionLabel} back into live truth through a rollback republish?`)) {
+        return;
+      }
+      clearMessages();
+      const response = await fetch(rollbackUrl, {method: "POST"});
+      await handleRollback(
+        response,
+        `Rollback republish from saved version ${versionLabel} failed.`,
+      );
+    };
+
+    window.ledgerRollbackPublication = async function (rollbackUrl, versionLabel) {
+      if (!window.confirm(`Republish previously published version ${versionLabel} back into live truth?`)) {
+        return;
+      }
+      clearMessages();
+      const response = await fetch(rollbackUrl, {method: "POST"});
+      await handleRollback(
+        response,
+        `Rollback republish from published version ${versionLabel} failed.`,
+      );
+    };
+  })();
+</script>

@@ -1,0 +1,245 @@
+<script>
+  (() => {
+    const metadataForm = document.getElementById("draft-metadata-form");
+    const metadataError = document.getElementById("draft-metadata-error");
+    const versionForm = document.getElementById("draft-version-form");
+    const versionError = document.getElementById("draft-version-error");
+    const addItemForm = document.getElementById("add-item-form");
+    const addItemInput = document.getElementById("new-item-cap-id");
+
+    const metadataInitial = metadataForm ? {
+      name: document.getElementById("draft-name-input").value,
+      description: document.getElementById("draft-description-input").value,
+    } : null;
+    const versionInitial = versionForm ? {
+      version: document.getElementById("draft-next-version-input").value,
+    } : null;
+
+    if (metadataForm) {
+      window.capEnvWireDirtyScope("metadata", metadataForm);
+    }
+    if (versionForm) {
+      window.capEnvWireDirtyScope("versioning", versionForm);
+    }
+    if (addItemForm) {
+      window.capEnvWireDirtyScope("add-item", addItemForm);
+    }
+
+    function showMetadataError(message) {
+      if (!metadataError) return;
+      metadataError.hidden = false;
+      metadataError.textContent = message;
+    }
+
+    function clearMetadataError() {
+      if (!metadataError) return;
+      metadataError.hidden = true;
+      metadataError.textContent = "";
+    }
+
+    function showVersionError(message) {
+      if (!versionError) return;
+      versionError.hidden = false;
+      versionError.textContent = message;
+    }
+
+    function clearVersionError() {
+      if (!versionError) return;
+      versionError.hidden = true;
+      versionError.textContent = "";
+    }
+
+    window.resetDraftMetadata = function () {
+      if (!metadataForm || !metadataInitial) return;
+      document.getElementById("draft-name-input").value = metadataInitial.name;
+      document.getElementById("draft-description-input").value = metadataInitial.description;
+      clearMetadataError();
+      window.capEnvSnapshotScope("metadata", metadataForm);
+    };
+
+    window.resetDraftVersionForm = function () {
+      if (!versionForm || !versionInitial) return;
+      document.getElementById("draft-next-version-input").value = versionInitial.version;
+      clearVersionError();
+      window.capEnvSnapshotScope("versioning", versionForm);
+    };
+
+    window.saveDraftMetadata = async function (draftId) {
+      if (!metadataForm) return;
+      clearMetadataError();
+
+      const payload = {
+        name: document.getElementById("draft-name-input").value.trim(),
+        description: document.getElementById("draft-description-input").value.trim(),
+      };
+      if (!payload.name) {
+        showMetadataError("Draft name is required.");
+        return;
+      }
+
+      const response = await fetch(`/api/capability-environment/drafts/${draftId}`, {
+        method: "PATCH",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        showMetadataError(error.detail || `Update failed (${response.status}).`);
+        return;
+      }
+      window.location.reload();
+    };
+
+    window.saveDraftVersion = async function (draftId) {
+      if (!versionForm) return;
+      clearVersionError();
+
+      const payload = {
+        version: document.getElementById("draft-next-version-input").value.trim(),
+      };
+      if (!payload.version) {
+        showVersionError("A new version value is required.");
+        return;
+      }
+
+      const response = await fetch(`/api/capability-environment/drafts/${draftId}/versions`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        showVersionError(error.detail || `Version save failed (${response.status}).`);
+        return;
+      }
+      window.location.reload();
+    };
+
+    window.showAddItemForm = function () {
+      if (!addItemForm) return;
+      addItemForm.hidden = false;
+      addItemInput?.focus();
+      window.capEnvSnapshotScope("add-item", addItemForm);
+    };
+
+    window.hideAddItemForm = function () {
+      if (!addItemForm) return;
+      addItemForm.hidden = true;
+      if (addItemInput) {
+        addItemInput.value = "";
+      }
+      window.capEnvSnapshotScope("add-item", addItemForm);
+    };
+
+    window.addDraftItem = async function (draftId) {
+      const capId = addItemInput?.value.trim() || "";
+      if (!capId) {
+        window.alert("Capability ID is required.");
+        return;
+      }
+
+      const response = await fetch(`/api/capability-environment/drafts/${draftId}/items`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+          planned_capability_id: capId,
+          draft_data: {
+            capability_id: capId,
+            display_name: "",
+            description: "",
+            capability_type: "function",
+            contract: {inputs: [], output: [], constraints: []},
+            tags: [],
+            version: "1.0.0",
+            pack_id: "environment",
+          },
+        }),
+      });
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        window.alert(error.detail || `Add failed (${response.status}).`);
+        return;
+      }
+      window.location.reload();
+    };
+
+    window.toggleItemEditor = function (itemId, open) {
+      const editor = document.getElementById(`editor-${itemId}`);
+      const textarea = document.getElementById(`draft-json-${itemId}`);
+      if (!editor || !textarea) return;
+
+      const scopeId = `item-${itemId}`;
+      if (open) {
+        editor.hidden = false;
+        if (!editor.dataset.wired) {
+          window.capEnvWireDirtyScope(scopeId, editor);
+          editor.dataset.wired = "true";
+        }
+        window.capEnvSnapshotScope(scopeId, editor);
+        textarea.focus();
+        return;
+      }
+
+      const initial = textarea.dataset.initialValue ?? textarea.value;
+      textarea.value = initial;
+      editor.hidden = true;
+      window.capEnvSnapshotScope(scopeId, editor);
+    };
+
+    window.saveDraftItem = async function (draftId, itemId) {
+      const textarea = document.getElementById(`draft-json-${itemId}`);
+      let data;
+      try {
+        data = JSON.parse(textarea.value);
+      } catch (error) {
+        window.alert(`Invalid JSON: ${error.message}`);
+        return;
+      }
+
+      const response = await fetch(`/api/capability-environment/drafts/${draftId}/items/${itemId}`, {
+        method: "PATCH",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({draft_data: data}),
+      });
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        window.alert(error.detail || `Save failed (${response.status}).`);
+        return;
+      }
+      window.location.reload();
+    };
+
+    window.deleteDraftItem = async function (draftId, itemId) {
+      if (!window.confirm("Remove this draft item?")) {
+        return;
+      }
+      const response = await fetch(`/api/capability-environment/drafts/${draftId}/items/${itemId}`, {
+        method: "DELETE",
+      });
+      if (!response.ok && response.status !== 204) {
+        window.alert(`Delete failed (${response.status}).`);
+        return;
+      }
+      window.location.reload();
+    };
+
+    window.deleteDraft = async function (draftId, draftName, redirectUrl) {
+      const name = draftName || "this draft";
+      if (!window.confirm(`Delete ${name}? This removes the full draft and its workbench history.`)) {
+        return;
+      }
+      const response = await fetch(`/api/capability-environment/drafts/${draftId}`, {
+        method: "DELETE",
+      });
+      if (!response.ok && response.status !== 204) {
+        window.alert(`Delete failed (${response.status}).`);
+        return;
+      }
+      if (redirectUrl) {
+        window.location.href = redirectUrl;
+        return;
+      }
+      window.location.href = "/capability-environment/stations/workbench";
+    };
+  })();
+</script>

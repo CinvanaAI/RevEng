@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% if skin %}{{ skin.surface_title }}{% else %}Capability Environment{% endif %} - RevEng</title>
+  <link rel="stylesheet" href="/static/app.css">
+  <link rel="stylesheet" href="/static/capability_environment_surface.css">
+</head>
+<body class="cap-env-place-body" data-skin-tone="{{ skin.tone if skin else 'neutral' }}">
+  <div class="cap-env-place-app">
+    <header class="cap-env-place-hud">
+      <a href="/capabilities" class="cap-env-place-exit" data-cap-env-leave="true">
+        <span class="cap-env-place-kicker">Exit</span>
+        <strong>Capabilities</strong>
+      </a>
+
+      <div class="cap-env-place-heading">
+        <span class="cap-env-place-kicker">Capability Environment</span>
+        <h1>{% if skin %}{{ skin.surface_title }}{% else %}Workshop Floor{% endif %}</h1>
+        <p>
+          {% if skin %}
+          Enter the capability workshop through this fixed skin manifestation. Hotspots open real
+          environment stations layered over platform-backed draft, inventory, ledger, and dispatch truth.
+          {% else %}
+          Skins are disabled, so the environment is surfacing its neutral workshop floor. Capability work
+          still happens here as a place with stations, overlays, and platform-backed actions.
+          {% endif %}
+        </p>
+      </div>
+
+      <div class="cap-env-place-tools" aria-label="Capability Environment controls">
+        <div class="cap-env-place-tool-actions">
+          <a href="{{ capability_environment_professional_href }}" class="btn btn-sm" data-cap-env-leave="true">Capability Platform</a>
+          <a href="{{ capability_environment_settings_href }}" class="btn btn-sm" data-cap-env-leave="true">Settings</a>
+        </div>
+        <div class="cap-env-place-chip-row">
+          <span class="cap-env-place-chip">
+            <span class="cap-env-place-chip-label">Manifestation</span>
+            <strong>{% if skin %}{{ skin.surface_title }}{% else %}Neutral Floor{% endif %}</strong>
+          </span>
+          <span class="cap-env-place-chip">
+            <span class="cap-env-place-chip-label">Station</span>
+            <strong>{{ selected_station.display_name if selected_station else "Free Roam" }}</strong>
+          </span>
+          <span class="cap-env-place-chip">
+            <span class="cap-env-place-chip-label">Drafts</span>
+            <strong>{{ environment_stats.total_drafts }}</strong>
+          </span>
+          <span class="cap-env-place-chip">
+            <span class="cap-env-place-chip-label">Installed</span>
+            <strong>{{ environment_stats.installed_count }}</strong>
+          </span>
+          {% if current_draft %}
+          <span class="cap-env-place-chip cap-env-place-chip--draft">
+            <span class="cap-env-place-chip-label">Current Draft</span>
+            <strong>{{ current_draft.name }}</strong>
+          </span>
+          {% endif %}
+        </div>
+      </div>
+    </header>
+
+    {% if page_notice or page_error %}
+    <div class="cap-env-place-flash {% if page_error %}is-error{% else %}is-notice{% endif %}">
+      {{ page_error or page_notice }}
+    </div>
+    {% endif %}
+
+    <main class="cap-env-place-main">
+      <section class="cap-env-place-stage-shell" aria-label="Capability Environment stage">
+        {% if skin %}
+        <div class="cap-env-scene-frame">
+          <img
+            src="{{ skin.surface_image_url }}"
+            alt="{{ skin.surface_title }} capability environment skin"
+            class="cap-env-scene-image">
+
+          <div class="cap-env-surface-hotspot-layer">
+            {% for hotspot in skin.hotspots %}
+            <button
+              type="button"
+              class="cap-env-hotspot"
+              style="{{ hotspot.bounds_style }}"
+              data-skin-id="{{ skin.skin_id }}"
+              data-action-id="{{ hotspot.action_id }}"
+              data-display-label="{{ hotspot.display_label }}"
+              data-target-url="{{ action_links[hotspot.action_id] }}">
+              <span class="cap-env-hotspot-pill">
+                <span class="cap-env-hotspot-label">{{ hotspot.display_label }}</span>
+                <span class="cap-env-hotspot-action">{{ hotspot.action_id }}</span>
+              </span>
+            </button>
+            {% endfor %}
+          </div>
+        </div>
+        {% else %}
+        <div class="cap-env-neutral-stage">
+          <div class="cap-env-neutral-grid">
+            <a href="{{ action_links.create_draft }}" class="cap-env-neutral-node cap-env-neutral-node--forge" data-cap-env-leave="true">
+              <span class="cap-env-place-kicker">Forge</span>
+              <strong>Create Draft</strong>
+              <span>Open a fresh draft without touching live truth.</span>
+            </a>
+            <a href="{{ action_links.inventory_wall }}" class="cap-env-neutral-node cap-env-neutral-node--inventory" data-cap-env-leave="true">
+              <span class="cap-env-place-kicker">Inventory Wall</span>
+              <strong>Inspect Installed</strong>
+              <span>Read real live capability records and package truth.</span>
+            </a>
+            <a href="{{ action_links.workbench }}" class="cap-env-neutral-node cap-env-neutral-node--workbench" data-cap-env-leave="true">
+              <span class="cap-env-place-kicker">Workbench</span>
+              <strong>Draft Work</strong>
+              <span>Continue editing stored drafts and items.</span>
+            </a>
+            <a href="{{ action_links.ledger }}" class="cap-env-neutral-node cap-env-neutral-node--ledger" data-cap-env-leave="true">
+              <span class="cap-env-place-kicker">Ledger</span>
+              <strong>Review Lineage</strong>
+              <span>Open saved versions, publication records, and rollback flow.</span>
+            </a>
+            <a href="{{ action_links.dispatch_bench }}" class="cap-env-neutral-node cap-env-neutral-node--dispatch" data-cap-env-leave="true">
+              <span class="cap-env-place-kicker">Dispatch Bench</span>
+              <strong>Validate and Publish</strong>
+              <span>Promote draft truth through the lawful install boundary.</span>
+            </a>
+            <a href="/capabilities" class="cap-env-neutral-node cap-env-neutral-node--return" data-cap-env-leave="true">
+              <span class="cap-env-place-kicker">Exit</span>
+              <strong>Capabilities</strong>
+              <span>Leave the workshop.</span>
+            </a>
+          </div>
+        </div>
+        {% endif %}
+
+        <div class="cap-env-place-floor-note">
+          {% if selected_station %}
+          {{ selected_station.display_name }} is open. Close the surface to return to the room.
+          {% else %}
+          Choose a hotspot or station node to open a real capability-work surface inside the room.
+          {% endif %}
+        </div>
+
+        {% if environment_memory.recent_benches %}
+        <div class="cap-env-place-memory">
+          <span class="cap-env-place-kicker">Recent Benches</span>
+          <div class="cap-env-place-memory-links">
+            {% for bench in environment_memory.recent_benches %}
+            <a href="{{ bench.href }}" class="cap-env-place-memory-link" data-cap-env-leave="true">
+              <span>{{ bench.name }}</span>
+              <em>{{ bench.state }}</em>
+            </a>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+      </section>
+
+      {% if active_station %}
+      <div class="cap-env-overlay-shell">
+        <a href="{{ close_surface_href }}" class="cap-env-overlay-backdrop" data-cap-env-leave="true" aria-label="Close station surface"></a>
+
+        <section class="cap-env-overlay-panel" aria-label="{{ selected_station.display_name if selected_station else 'Capability Environment surface' }}">
+          <header class="cap-env-overlay-head">
+            <div>
+              <span class="cap-env-place-kicker">{{ selected_station.display_name if selected_station else "Capability Environment" }}</span>
+              <h2>
+                {% if active_station == "create_draft" %}
+                  Draft Forge
+                {% elif active_station == "inventory_wall" %}
+                  Inventory Wall
+                {% elif active_station == "ledger" %}
+                  Ledger
+                {% elif active_station == "dispatch_bench" %}
+                  Dispatch Bench
+                {% elif current_draft %}
+                  {{ current_draft.name }}
+                {% else %}
+                  Workbench
+                {% endif %}
+              </h2>
+              <p>
+                {% if active_station == "create_draft" %}
+                  Start non-live draft work intentionally from inside the environment.
+                {% elif active_station == "inventory_wall" %}
+                  Inspect live installed truth here, then hand off into draft work only if you choose to.
+                {% elif active_station == "ledger" %}
+                  Review saved versions, publication records, candidate history, and lawful rollback.
+                {% elif active_station == "dispatch_bench" %}
+                  Validate and publish from draft state through the real platform boundary.
+                {% elif current_draft %}
+                  Continue work on the selected draft without leaving the room.
+                {% else %}
+                  Open stored draft work and move through the workshop from here.
+                {% endif %}
+              </p>
+            </div>
+
+            <div class="cap-env-overlay-head-actions">
+              {% if current_draft %}
+              <span class="cap-env-place-chip cap-env-place-chip--draft">
+                <span class="cap-env-place-chip-label">Draft</span>
+                <strong>{{ current_draft.name }}</strong>
+              </span>
+              {% endif %}
+              <a href="{{ close_surface_href }}" class="btn btn-sm" data-cap-env-leave="true">Close</a>
+            </div>
+          </header>
+
+          <div class="cap-env-overlay-body">
+            {% if active_station == "create_draft" %}
+              {% include "capability_environment/surfaces/forge.html" %}
+            {% elif active_station == "inventory_wall" %}
+              {% include "capability_environment/surfaces/inventory.html" %}
+            {% elif active_station == "ledger" %}
+              {% include "capability_environment/surfaces/ledger.html" %}
+            {% elif active_station == "dispatch_bench" %}
+              {% include "capability_environment/surfaces/dispatch.html" %}
+            {% elif current_draft %}
+              {% include "capability_environment/surfaces/draft.html" %}
+            {% else %}
+              {% include "capability_environment/surfaces/drafts.html" %}
+            {% endif %}
+          </div>
+        </section>
+      </div>
+      {% endif %}
+    </main>
+  </div>
+
+  <script>
+    (() => {
+      const dirtyScopes = new Set();
+      const environmentEntryHref = {{ environment_entry_href|tojson }};
+
+      function syncDirtyFlag() {
+        document.body.dataset.capEnvDirty = dirtyScopes.size > 0 ? "true" : "false";
+      }
+
+      function currentFieldValue(field) {
+        if (field.type === "checkbox") {
+          return field.checked ? "1" : "0";
+        }
+        return field.value;
+      }
+
+      window.capEnvBuildEnvironmentUrl = function (params = {}) {
+        const url = new URL(environmentEntryHref, window.location.origin);
+        const entries = Object.entries(params);
+        entries.forEach(([key, value]) => {
+          if (value === null || value === undefined || value === "") {
+            url.searchParams.delete(key);
+            return;
+          }
+          url.searchParams.set(key, value);
+        });
+        return url.toString();
+      };
+
+      window.capEnvSetScopeDirty = function (scopeId, dirty) {
+        if (!scopeId) return;
+        if (dirty) {
+          dirtyScopes.add(scopeId);
+        } else {
+          dirtyScopes.delete(scopeId);
+        }
+        syncDirtyFlag();
+      };
+
+      window.capEnvSnapshotScope = function (scopeId, container) {
+        if (!scopeId || !container) return;
+        container.querySelectorAll("[data-dirty-input]").forEach((field) => {
+          field.dataset.initialValue = currentFieldValue(field);
+        });
+        window.capEnvSetScopeDirty(scopeId, false);
+      };
+
+      window.capEnvUpdateScope = function (scopeId, container) {
+        if (!scopeId || !container) return;
+        const dirty = Array.from(container.querySelectorAll("[data-dirty-input]")).some((field) => {
+          const initial = field.dataset.initialValue ?? currentFieldValue(field);
+          return currentFieldValue(field) !== initial;
+        });
+        window.capEnvSetScopeDirty(scopeId, dirty);
+      };
+
+      window.capEnvWireDirtyScope = function (scopeId, container) {
+        if (!scopeId || !container) return;
+        window.capEnvSnapshotScope(scopeId, container);
+        const sync = () => window.capEnvUpdateScope(scopeId, container);
+        container.addEventListener("input", sync);
+        container.addEventListener("change", sync);
+      };
+
+      window.capEnvHasDirtyState = function () {
+        return dirtyScopes.size > 0;
+      };
+
+      function confirmLeave() {
+        if (!window.capEnvHasDirtyState()) {
+          return true;
+        }
+        return window.confirm("Discard unsaved changes and leave this station?");
+      }
+
+      document.querySelectorAll("[data-cap-env-leave]").forEach((link) => {
+        link.addEventListener("click", (event) => {
+          if (!confirmLeave()) {
+            event.preventDefault();
+          }
+        });
+      });
+
+      window.addEventListener("beforeunload", (event) => {
+        if (!window.capEnvHasDirtyState()) {
+          return;
+        }
+        event.preventDefault();
+        event.returnValue = "";
+      });
+
+      const frame = document.querySelector(".cap-env-scene-frame");
+      const image = document.querySelector(".cap-env-scene-image");
+      const hotspotLayer = document.querySelector(".cap-env-surface-hotspot-layer");
+      if (frame && image && hotspotLayer) {
+        const syncHotspotLayerToRenderedImage = () => {
+          if (!image.naturalWidth || !image.naturalHeight) {
+            return;
+          }
+
+          const frameWidth = frame.clientWidth;
+          const frameHeight = frame.clientHeight;
+          if (!frameWidth || !frameHeight) {
+            return;
+          }
+
+          const imageScale = Math.min(
+            frameWidth / image.naturalWidth,
+            frameHeight / image.naturalHeight,
+          );
+          const renderedImageWidth = image.naturalWidth * imageScale;
+          const renderedImageHeight = image.naturalHeight * imageScale;
+          const left = (frameWidth - renderedImageWidth) / 2;
+          const top = (frameHeight - renderedImageHeight) / 2;
+
+          hotspotLayer.style.left = `${left}px`;
+          hotspotLayer.style.top = `${top}px`;
+          hotspotLayer.style.width = `${renderedImageWidth}px`;
+          hotspotLayer.style.height = `${renderedImageHeight}px`;
+        };
+
+        if (image.complete) {
+          window.requestAnimationFrame(syncHotspotLayerToRenderedImage);
+        } else {
+          image.addEventListener("load", syncHotspotLayerToRenderedImage, { once: true });
+        }
+
+        window.addEventListener("resize", syncHotspotLayerToRenderedImage);
+        if ("ResizeObserver" in window) {
+          const resizeObserver = new ResizeObserver(syncHotspotLayerToRenderedImage);
+          resizeObserver.observe(frame);
+        }
+      }
+
+      document.querySelectorAll(".cap-env-hotspot").forEach((button) => {
+        button.addEventListener("pointerdown", (event) => {
+          const rect = button.getBoundingClientRect();
+          if (!rect.width || !rect.height) {
+            return;
+          }
+
+          const x = ((event.clientX - rect.left) / rect.width) * 100;
+          const y = ((event.clientY - rect.top) / rect.height) * 100;
+          button.style.setProperty("--cap-ripple-x", `${x}%`);
+          button.style.setProperty("--cap-ripple-y", `${y}%`);
+        });
+
+        button.addEventListener("click", () => {
+          const targetUrl = button.dataset.targetUrl || "";
+          button.classList.remove("is-firing");
+          void button.offsetWidth;
+          button.classList.add("is-firing");
+          window.setTimeout(() => button.classList.remove("is-firing"), 560);
+          if (!targetUrl) {
+            return;
+          }
+          window.setTimeout(() => {
+            window.location.href = targetUrl;
+          }, 240);
+        });
+      });
+    })();
+  </script>
+
+  {% if active_station == "create_draft" %}
+    {% include "capability_environment/surfaces/forge_scripts.html" %}
+  {% elif active_station == "inventory_wall" %}
+    {% include "capability_environment/surfaces/inventory_scripts.html" %}
+  {% elif active_station == "dispatch_bench" %}
+    {% include "capability_environment/surfaces/dispatch_scripts.html" %}
+  {% elif active_station == "ledger" %}
+    {% include "capability_environment/surfaces/ledger_scripts.html" %}
+  {% elif active_station == "workbench" and current_draft %}
+    {% include "capability_environment/surfaces/draft_scripts.html" %}
+  {% elif active_station == "workbench" %}
+    {% include "capability_environment/surfaces/drafts_scripts.html" %}
+  {% endif %}
+</body>
+</html>

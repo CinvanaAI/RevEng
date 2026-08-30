@@ -1,0 +1,167 @@
+<script>
+  (() => {
+    const dialog = document.getElementById("inventory-dialog");
+    let activeCapability = null;
+
+    window.openCapabilityDetail = async function (capabilityId) {
+      activeCapability = {capability_id: capabilityId};
+      renderLoadingState(capabilityId);
+      dialog.showModal();
+
+      try {
+        const response = await fetch(`/api/capability-environment/inventory/${encodeURIComponent(capabilityId)}`);
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({}));
+          throw new Error(error.detail || `Inventory detail failed (${response.status}).`);
+        }
+        const capability = await response.json();
+        activeCapability = capability;
+        renderCapabilityDetail(capability);
+      } catch (error) {
+        renderErrorState(capabilityId, error.message || "Failed to load installed capability detail.");
+      }
+    };
+
+    window.createDraftFromCapability = async function () {
+      if (!activeCapability?.capability_id) return;
+
+      const button = document.getElementById("modal-create-draft-btn");
+      button.disabled = true;
+      button.textContent = "Opening...";
+
+      try {
+        const response = await fetch("/api/capability-environment/inventory/copy-to-draft", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({capability_id: activeCapability.capability_id}),
+        });
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({}));
+          throw new Error(error.detail || `Draft copy failed (${response.status}).`);
+        }
+
+        const draft = await response.json();
+        window.location.href = window.capEnvBuildEnvironmentUrl({
+          station: "workbench",
+          draft: draft.id,
+        });
+      } catch (error) {
+        window.alert(error.message || "Unexpected error opening draft.");
+        button.disabled = false;
+        button.textContent = "Copy into new draft";
+      }
+    };
+
+    dialog?.addEventListener("close", () => {
+      activeCapability = null;
+      const button = document.getElementById("modal-create-draft-btn");
+      if (button) {
+        button.disabled = false;
+        button.textContent = "Copy into new draft";
+      }
+    });
+
+    function renderLoadingState(capabilityId) {
+      document.getElementById("modal-cap-id").textContent = capabilityId || "-";
+      document.getElementById("modal-display-name").textContent = "Loading...";
+      document.getElementById("modal-description").textContent = "Loading installed capability record...";
+      document.getElementById("modal-pack").textContent = "-";
+      document.getElementById("modal-version").textContent = "-";
+      document.getElementById("modal-source").textContent = "-";
+      document.getElementById("modal-bindings").textContent = "-";
+      document.getElementById("modal-components").textContent = "-";
+      document.getElementById("modal-execution-order").textContent = "-";
+      document.getElementById("modal-package-object").textContent = "-";
+      document.getElementById("modal-package-created").textContent = "-";
+      document.getElementById("modal-lifecycle").innerHTML = `<span class="badge badge-inactive">loading</span>`;
+      document.getElementById("modal-type").innerHTML = `<span class="badge badge-inactive">-</span>`;
+      document.getElementById("modal-tags").textContent = "-";
+      document.getElementById("modal-record-events").textContent = "Loading stored record events...";
+      document.getElementById("modal-view-package-btn").href = "#";
+    }
+
+    function renderErrorState(capabilityId, message) {
+      document.getElementById("modal-cap-id").textContent = capabilityId || "-";
+      document.getElementById("modal-display-name").textContent = "Unavailable";
+      document.getElementById("modal-description").textContent = message;
+      document.getElementById("modal-pack").textContent = "-";
+      document.getElementById("modal-version").textContent = "-";
+      document.getElementById("modal-source").textContent = "-";
+      document.getElementById("modal-bindings").textContent = "-";
+      document.getElementById("modal-components").textContent = "-";
+      document.getElementById("modal-execution-order").textContent = "-";
+      document.getElementById("modal-package-object").textContent = "-";
+      document.getElementById("modal-package-created").textContent = "-";
+      document.getElementById("modal-lifecycle").innerHTML = `<span class="badge badge-inactive">error</span>`;
+      document.getElementById("modal-type").innerHTML = `<span class="badge badge-inactive">-</span>`;
+      document.getElementById("modal-tags").textContent = "-";
+      document.getElementById("modal-record-events").textContent = "No record history available.";
+    }
+
+    function renderCapabilityDetail(capability) {
+      document.getElementById("modal-view-package-btn").href =
+        `/capabilities/${encodeURIComponent(capability.capability_id || "")}/package`;
+      document.getElementById("modal-cap-id").textContent = capability.capability_id || "-";
+      document.getElementById("modal-display-name").textContent = capability.display_name || "-";
+      document.getElementById("modal-description").textContent = capability.description || "(no description)";
+      document.getElementById("modal-pack").textContent = capability.pack_id || "-";
+      document.getElementById("modal-version").textContent = capability.version || "-";
+      document.getElementById("modal-source").textContent = [capability.source_kind, capability.source_ref].filter(Boolean).join(" / ") || "-";
+
+      const bindings = [
+        capability.implementation_ref ? `implementation: ${capability.implementation_ref}` : null,
+        capability.combination_logic_ref ? `composite: ${capability.combination_logic_ref}` : null,
+      ].filter(Boolean);
+      document.getElementById("modal-bindings").textContent = bindings.join("\n") || "-";
+
+      document.getElementById("modal-components").textContent = (capability.component_capabilities || []).join("\n") || "-";
+      document.getElementById("modal-execution-order").textContent = (capability.execution_order || []).join("\n") || "-";
+      document.getElementById("modal-package-object").textContent = capability.package_object
+        ? [capability.package_object.package_kind, capability.package_object.id].filter(Boolean).join("\n")
+        : "-";
+      document.getElementById("modal-package-created").textContent = capability.package_object?.created_at || "-";
+
+      const tags = capability.tags || [];
+      const tagsEl = document.getElementById("modal-tags");
+      if (tags.length) {
+        tagsEl.innerHTML = tags
+          .map((tag) => `<span class="cap-env-tag">${escapeHtml(tag)}</span>`)
+          .join("");
+      } else {
+        tagsEl.textContent = "-";
+      }
+
+      const typeClass = capability.capability_type === "composite" ? "badge-running" : "badge-inactive";
+      document.getElementById("modal-type").innerHTML = `<span class="badge ${typeClass}">${escapeHtml(capability.capability_type || "-")}</span>`;
+      document.getElementById("modal-lifecycle").innerHTML = `<span class="badge badge-completed">${escapeHtml(capability.lifecycle_state || "-")}</span>`;
+
+      const eventsEl = document.getElementById("modal-record-events");
+      const events = capability.record_events || [];
+      if (!events.length) {
+        eventsEl.textContent = "No stored record events found.";
+        return;
+      }
+      eventsEl.innerHTML = events
+        .slice(0, 6)
+        .map((event) => {
+          const source = [event.source_kind, event.source_ref].filter(Boolean).join(" / ") || "-";
+          return `
+            <div class="cap-env-surface-card cap-env-surface-card--inset">
+              <strong class="cell-mono">${escapeHtml(event.event_type || "-")}</strong>
+              <div class="cap-env-inline-hint">${escapeHtml(source)}</div>
+              <div class="cell-mono">${escapeHtml((event.created_at || "").slice(0, 16) || "-")}</div>
+            </div>
+          `;
+        })
+        .join("");
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+  })();
+</script>

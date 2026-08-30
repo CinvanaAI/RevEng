@@ -1,0 +1,22 @@
+<script>
+  (() => {
+    window.deleteDraft = async function (draftId, draftName, redirectUrl) {
+      const name = draftName || "this draft";
+      if (!window.confirm(`Delete ${name}? This removes the full draft and its workbench history.`)) {
+        return;
+      }
+      const response = await fetch(`/api/capability-environment/drafts/${draftId}`, {
+        method: "DELETE",
+      });
+      if (!response.ok && response.status !== 204) {
+        window.alert(`Delete failed (${response.status}).`);
+        return;
+      }
+      if (redirectUrl) {
+        window.location.href = redirectUrl;
+        return;
+      }
+      window.location.reload();
+    };
+  })();
+</script>

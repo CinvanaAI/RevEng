@@ -1,0 +1,244 @@
+<div class="cap-env-surface-stack">
+  <section class="cap-env-surface-card cap-env-surface-card--accent">
+    <span class="cap-env-card-label">Draft Boundary</span>
+    <h3>Editing stays inside the environment</h3>
+    <p>
+      Save and cancel are explicit here. Leaving this draft warns before discarding unsaved local edits.
+      Publishing and export remain available through Dispatch Bench.
+    </p>
+  </section>
+
+  <section class="cap-env-surface-card">
+    <div class="cap-env-surface-card-head">
+      <div>
+        <span class="cap-env-card-label">Draft Overview</span>
+        <h3>{{ draft.name }}</h3>
+      </div>
+      <a href="{{ station_urls.dispatch_bench }}" class="btn btn-sm" data-cap-env-leave="true">Open Dispatch Bench</a>
+    </div>
+
+    <form id="draft-metadata-form" class="cap-env-form" novalidate>
+      <div class="cap-env-two-col">
+        <label class="cap-env-field">
+          <span class="cap-env-field-label">Name</span>
+          <input id="draft-name-input" type="text" class="form-control" value="{{ draft.name }}" data-dirty-input>
+        </label>
+        <div class="cap-env-field">
+          <span class="cap-env-field-label">Current Version</span>
+          <div class="cap-env-mono-block">v{{ draft.version }}</div>
+        </div>
+      </div>
+
+      <label class="cap-env-field">
+        <span class="cap-env-field-label">Description</span>
+        <textarea id="draft-description-input" rows="4" class="form-control" data-dirty-input>{{ draft.description }}</textarea>
+      </label>
+
+      <div id="draft-metadata-error" class="cap-env-inline-error" hidden></div>
+
+      <div class="cap-env-form-actions">
+        <button type="button" class="btn btn-primary" onclick="saveDraftMetadata('{{ draft.id }}')">Save Details</button>
+        <button type="button" class="btn" onclick="resetDraftMetadata()">Cancel Changes</button>
+        {% if draft.lifecycle_state == "draft" %}
+        <button
+          type="button"
+          class="btn btn-danger"
+          onclick="deleteDraft('{{ draft.id }}', {{ draft.name|tojson }}, {{ station_urls.workbench|tojson }})">
+          Delete Draft
+        </button>
+        {% endif %}
+        <a href="{{ station_urls.workbench }}" class="btn" data-cap-env-leave="true">Leave Draft</a>
+      </div>
+    </form>
+  </section>
+
+  <section class="cap-env-surface-card">
+    <div class="cap-env-surface-card-head">
+      <div>
+        <span class="cap-env-card-label">Versioning</span>
+        <h3>Save a new workbench version</h3>
+      </div>
+      <span class="cap-env-pill">Current v{{ draft.version }}</span>
+    </div>
+
+    {% if draft.lifecycle_state == "draft" %}
+    <form id="draft-version-form" class="cap-env-form" novalidate>
+      <label class="cap-env-field">
+        <span class="cap-env-field-label">Next version</span>
+        <input
+          id="draft-next-version-input"
+          type="text"
+          class="form-control cap-env-mono-input"
+          value="{{ draft.version }}"
+          data-dirty-input>
+      </label>
+
+      <div id="draft-version-error" class="cap-env-inline-error" hidden></div>
+
+      <div class="cap-env-form-actions">
+        <button type="button" class="btn btn-primary" onclick="saveDraftVersion('{{ draft.id }}')">Save New Version</button>
+        <button type="button" class="btn" onclick="resetDraftVersionForm()">Reset</button>
+      </div>
+
+      <p class="cap-env-inline-hint">
+        Saving a new version records an immutable workbench snapshot and then advances the draft's current version.
+      </p>
+    </form>
+    {% else %}
+    <div class="cap-env-empty-state">
+      <p>Only active draft-state drafts can save a new workbench version.</p>
+    </div>
+    {% endif %}
+  </section>
+
+  <section class="cap-env-surface-card">
+    <div class="cap-env-surface-card-head">
+      <div>
+        <span class="cap-env-card-label">Draft Items</span>
+        <h3>{{ items|length }} authored capability item{{ 's' if items|length != 1 else '' }}</h3>
+      </div>
+      {% if draft.lifecycle_state == "draft" %}
+      <button type="button" class="btn btn-sm" onclick="showAddItemForm()">Add Draft Item</button>
+      {% endif %}
+    </div>
+
+    {% if draft.lifecycle_state == "draft" %}
+    <form id="add-item-form" class="cap-env-inline-form" hidden novalidate>
+      <label class="cap-env-field">
+        <span class="cap-env-field-label">Planned capability ID</span>
+        <input
+          id="new-item-cap-id"
+          type="text"
+          class="form-control cap-env-mono-input"
+          placeholder="mypack.do_thing"
+          data-dirty-input>
+      </label>
+      <div class="cap-env-form-actions">
+        <button type="button" class="btn btn-primary btn-sm" onclick="addDraftItem('{{ draft.id }}')">Add Item</button>
+        <button type="button" class="btn btn-sm" onclick="hideAddItemForm()">Cancel</button>
+      </div>
+    </form>
+    {% endif %}
+
+    {% if items %}
+    <div class="cap-env-item-stack">
+      {% for item in items %}
+      <article id="item-{{ item.id }}" class="cap-env-item-card">
+        <div class="cap-env-item-head">
+          <div>
+            <strong class="cell-mono">{{ item.planned_capability_id }}</strong>
+            <span class="badge {% if item.item_state == 'validated' %}badge-completed{% elif item.item_state == 'published' %}badge-running{% else %}badge-inactive{% endif %}">
+              {{ item.item_state }}
+            </span>
+          </div>
+          {% if draft.lifecycle_state == "draft" %}
+          <div class="cap-env-form-actions">
+            <button type="button" class="btn btn-sm" onclick="toggleItemEditor('{{ item.id }}', true)">Edit Draft JSON</button>
+            <button type="button" class="btn btn-sm btn-danger" onclick="deleteDraftItem('{{ draft.id }}', '{{ item.id }}')">Remove</button>
+          </div>
+          {% endif %}
+        </div>
+
+        <div class="cap-env-inline-hint">
+          {% if item.draft_data.display_name %}
+          <strong>{{ item.draft_data.display_name }}</strong> -
+          {% endif %}
+          type: <code>{{ item.draft_data.get('capability_type', '-') }}</code>
+          {% if item.draft_data.description %}
+          - {{ item.draft_data.description }}
+          {% endif %}
+        </div>
+
+        <div id="editor-{{ item.id }}" class="cap-env-editor" hidden>
+          <div class="cap-env-inline-hint">
+            Edit the draft JSON directly. Saving resets the item to draft state under the current system law.
+          </div>
+          <textarea
+            id="draft-json-{{ item.id }}"
+            rows="14"
+            class="form-control cap-env-code-input"
+            data-dirty-input>{{ item.draft_data | tojson(indent=2) }}</textarea>
+          <div class="cap-env-form-actions">
+            <button type="button" class="btn btn-sm" onclick="toggleItemEditor('{{ item.id }}', false)">Cancel</button>
+            <button type="button" class="btn btn-primary btn-sm" onclick="saveDraftItem('{{ draft.id }}', '{{ item.id }}')">Save Draft</button>
+          </div>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="cap-env-empty-state">
+      <p>No draft items are on this bench yet.</p>
+      {% if draft.lifecycle_state == "draft" %}
+      <button type="button" class="btn btn-primary" onclick="showAddItemForm()">Add the first draft item</button>
+      {% endif %}
+    </div>
+    {% endif %}
+  </section>
+
+  <section class="cap-env-surface-card">
+    <div class="cap-env-surface-card-head">
+      <div>
+        <span class="cap-env-card-label">Assembly Station</span>
+        <h3>Composite draft helper</h3>
+      </div>
+      <span class="cap-env-pill">Existing runtime logic kinds</span>
+    </div>
+
+    <div class="cap-env-logic-grid">
+      {% for kind, description in combination_logic_kinds.items() %}
+      <div class="cap-env-surface-card cap-env-surface-card--inset">
+        <span class="cap-env-card-label">{{ kind }}</span>
+        <p>{{ description }}</p>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="cap-env-surface-card cap-env-surface-card--inset">
+      <span class="cap-env-card-label">Draft Template</span>
+      <pre class="cap-env-code-block">{
+  "capability_id": "mypack.combined_thing",
+  "display_name": "My Combined Thing",
+  "description": "Runs A then B and merges outputs.",
+  "capability_type": "composite",
+  "component_capabilities": ["mypack.thing_a", "mypack.thing_b"],
+  "execution_order": ["mypack.thing_a", "mypack.thing_b"],
+  "combination_logic_kind": "merge",
+  "contract": { "inputs": [], "output": [], "constraints": [] },
+  "version": "1.0.0",
+  "tags": []
+}</pre>
+    </div>
+  </section>
+
+  <section class="cap-env-surface-card">
+    <div class="cap-env-surface-card-head">
+      <div>
+        <span class="cap-env-card-label">Bench State</span>
+        <h3>Current item-state distribution</h3>
+      </div>
+    </div>
+
+    {% set draft_count = items | selectattr('item_state', 'equalto', 'draft') | list | length %}
+    {% set validated_count = items | selectattr('item_state', 'equalto', 'validated') | list | length %}
+    {% set published_count = items | selectattr('item_state', 'equalto', 'published') | list | length %}
+    <div class="cap-env-detail-grid">
+      <div>
+        <span class="cap-env-card-label">Draft Items</span>
+        <p>{{ draft_count }}</p>
+      </div>
+      <div>
+        <span class="cap-env-card-label">Validated Items</span>
+        <p>{{ validated_count }}</p>
+      </div>
+      <div>
+        <span class="cap-env-card-label">Published Items</span>
+        <p>{{ published_count }}</p>
+      </div>
+      <div>
+        <span class="cap-env-card-label">Lifecycle</span>
+        <p>{{ draft.lifecycle_state }}</p>
+      </div>
+    </div>
+  </section>
+</div>

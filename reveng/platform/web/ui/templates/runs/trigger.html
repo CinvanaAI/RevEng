@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% set active_nav = "run-new" %}
+
+{% block title %}Run Analysis — RevEng{% endblock %}
+{% block page_title %}Run Analysis{% endblock %}
+
+{% block content %}
+<div style="max-width:640px;">
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Trigger New Analysis Run</span>
+    </div>
+    <div class="card-body">
+
+      <div class="alert alert-info" style="margin-bottom:1.5rem;">
+        This runs the existing RevEng analysis pipeline against a Python repository.
+        The run executes in the background — you will be taken to the run detail page to watch progress.
+      </div>
+
+      <form method="post" action="/runs/new">
+
+        <div class="form-group">
+          <label class="form-label" for="repo_path">Target Path *</label>
+          <div style="display:flex;gap:.5rem;">
+            <input class="form-control" id="repo_path" name="repo_path" type="text"
+                   placeholder="/path/to/your/python/project" required autofocus
+                   style="font-family:var(--font-mono);flex:1;">
+            <button type="button" class="btn btn-ghost" onclick="browseRepoPath()" style="white-space:nowrap;">Browse...</button>
+          </div>
+          <span class="form-hint">
+            Absolute path to a Python project folder.
+            If you enter a single file path, analysis will run on its parent directory.
+          </span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="output_dir">Output Directory</label>
+          <div style="display:flex;gap:.5rem;">
+            <input class="form-control" id="output_dir" name="output_dir" type="text"
+                   placeholder="Leave blank to use &lt;target&gt;/output"
+                   style="font-family:var(--font-mono);flex:1;">
+            <button type="button" class="btn btn-ghost" onclick="browseOutputDir()" style="white-space:nowrap;">Browse...</button>
+          </div>
+        </div>
+
+        <hr class="divider">
+
+        <div style="font-size:.8rem;font-weight:600;color:var(--text-muted);margin-bottom:.875rem;text-transform:uppercase;letter-spacing:.07em;">
+          Workflow Options
+        </div>
+
+        <div style="display:flex;gap:2rem;flex-wrap:wrap;margin-bottom:1.25rem;">
+          <label class="form-check">
+            <input type="checkbox" name="with_ai" value="true">
+            <span>AI file explanations</span>
+          </label>
+          <label class="form-check">
+            <input type="checkbox" name="layered" value="true">
+            <span>Full layered breakdown</span>
+          </label>
+        </div>
+
+        <div id="ai-options" style="display:none;">
+          <div class="form-group">
+            <label class="form-label" for="ai_limit">AI File Limit</label>
+            <input class="form-control" id="ai_limit" name="ai_limit" type="number"
+                   min="1" placeholder="Leave blank for no limit" style="max-width:200px;">
+            <span class="form-hint">Max files to send to the AI model for explanation.</span>
+          </div>
+        </div>
+
+        <details style="margin-bottom:1.25rem;">
+          <summary style="cursor:pointer;color:var(--text-muted);font-size:.8rem;padding:.25rem 0;">
+            Advanced options
+          </summary>
+          <div style="padding-top:.875rem;display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label" for="extractor_workers">Extractor Workers</label>
+              <input class="form-control" id="extractor_workers" name="extractor_workers"
+                     type="number" min="1" max="32" value="6">
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label" for="ai_file_workers">AI File Workers</label>
+              <input class="form-control" id="ai_file_workers" name="ai_file_workers"
+                     type="number" min="1" max="32" value="10">
+            </div>
+          </div>
+          <div class="form-group" style="margin-top:1rem;margin-bottom:0;">
+            <label class="form-label" for="env_file">Env File Path</label>
+            <input class="form-control" id="env_file" name="env_file" type="text"
+                   value=".env" style="font-family:var(--font-mono);">
+            <span class="form-hint">Path to env file for AI API keys (default: .env)</span>
+          </div>
+        </details>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">▶ Start Analysis</button>
+          <a href="/runs" class="btn btn-ghost">Cancel</a>
+        </div>
+
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+document.querySelector('input[name="with_ai"]').addEventListener('change', function() {
+  document.getElementById('ai-options').style.display = this.checked ? 'block' : 'none';
+});
+async function browseRepoPath() {
+  const path = await pickDirectory();
+  if (path) document.getElementById('repo_path').value = path;
+}
+async function browseOutputDir() {
+  const path = await pickDirectory();
+  if (path) document.getElementById('output_dir').value = path;
+}
+</script>
+{% endblock %}

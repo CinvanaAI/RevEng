@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}RevEng Control Center{% endblock %}</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+
+  <nav class="sidebar">
+    <div class="sidebar-logo">
+      RevEng
+      <span>Control Center</span>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-label">Agents</div>
+      <a href="/agents" class="nav-link {% if active_nav == 'agents' %}active{% endif %}">
+        <span class="icon">[]</span> Agents
+      </a>
+      <a href="/agent-environment" class="nav-link nav-link-portal {% if active_nav == 'agent-environment' %}active{% endif %}">
+        <span class="icon">{}</span>
+        <span class="nav-link-copy">
+          <span class="nav-link-title">Agent Environment</span>
+          <span class="nav-link-note">Enter place</span>
+        </span>
+      </a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-label">Analysis</div>
+      <a href="/runs/new" class="nav-link {% if active_nav == 'run-new' %}active{% endif %}">
+        <span class="icon">&gt;</span> Run Analysis
+      </a>
+      <a href="/runs" class="nav-link {% if active_nav == 'runs' %}active{% endif %}">
+        <span class="icon">=</span> Run History
+      </a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-label-row">
+        <div class="nav-label">Capabilities</div>
+        <a href="/capabilities/settings" class="nav-settings-link {% if active_nav == 'capabilities-settings' %}active{% endif %}">Settings</a>
+      </div>
+      <a href="/capabilities" class="nav-link nav-link-portal {% if active_nav == 'capabilities' %}active{% endif %}">
+        <span class="icon">[]</span>
+        <span class="nav-link-copy">
+          <span class="nav-link-title">Capability Platform</span>
+          <span class="nav-link-note">Open workspace</span>
+        </span>
+      </a>
+      <a href="/capability-environment" class="nav-link nav-link-portal {% if active_nav == 'capability-environment' %}active{% endif %}">
+        <span class="icon">{}</span>
+        <span class="nav-link-copy">
+          <span class="nav-link-title">Capability Environment</span>
+          <span class="nav-link-note">Enter place</span>
+        </span>
+      </a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-label">System</div>
+      <a href="/providers" class="nav-link {% if active_nav == 'providers' %}active{% endif %}">
+        <span class="icon">*</span> Providers
+      </a>
+    </div>
+  </nav>
+
+  <div class="main">
+    <header class="topbar">
+      <span class="page-title">{% block page_title %}{% endblock %}</span>
+      <div style="display:flex;gap:.75rem;align-items:center;">
+        {% block topbar_actions %}{% endblock %}
+      </div>
+    </header>
+
+    <div class="content">
+      {% block content %}{% endblock %}
+    </div>
+  </div>
+
+<script>
+// Bridge helpers — use native OS pickers when running inside PyWebView; fall back to no-op in browser/dev mode.
+async function pickDirectory() {
+  if (window.pywebview && window.pywebview.api) {
+    return await window.pywebview.api.pick_directory();
+  }
+  return null;
+}
+async function pickFile(fileTypes) {
+  if (window.pywebview && window.pywebview.api) {
+    return await window.pywebview.api.pick_file(fileTypes || []);
+  }
+  return null;
+}
+</script>
+</body>
+</html>

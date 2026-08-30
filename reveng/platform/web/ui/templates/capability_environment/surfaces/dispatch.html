@@ -1,0 +1,146 @@
+{% set dispatch_draft = station_draft or current_draft %}
+{% set dispatch_spec = station_draft_spec %}
+{% set dispatch_history = station_draft_history %}
+
+<div class="cap-env-surface-stack">
+  <section class="cap-env-surface-card cap-env-surface-card--accent">
+    <span class="cap-env-card-label">Publication Boundary</span>
+    <h3>Publish here to replace live installed capability truth</h3>
+    <p>
+      Dispatch Bench validates, publishes, and exports drafts. Publish now performs the rightful platform-owned
+      transition that installs the draft-backed package into live installed capability truth.
+    </p>
+  </section>
+
+  {% if dispatch_draft %}
+  <section class="cap-env-surface-card">
+    <div class="cap-env-surface-card-head">
+      <div>
+        <span class="cap-env-card-label">Selected Draft</span>
+        <h3>{{ dispatch_draft.name }}</h3>
+      </div>
+      <div class="cap-env-pill-row">
+        <span class="badge {% if dispatch_draft.lifecycle_state == 'published' %}badge-completed{% elif dispatch_draft.lifecycle_state == 'retired' %}badge-inactive{% else %}badge-running{% endif %}">
+          {{ dispatch_draft.lifecycle_state }}
+        </span>
+        <span class="cap-env-pill">v{{ dispatch_draft.version }}</span>
+      </div>
+    </div>
+
+    {% if dispatch_spec %}
+    {% set draft_count = dispatch_spec.items | selectattr('item_state', 'equalto', 'draft') | list | length %}
+    {% set validated_count = dispatch_spec.items | selectattr('item_state', 'equalto', 'validated') | list | length %}
+    {% set published_count = dispatch_spec.items | selectattr('item_state', 'equalto', 'published') | list | length %}
+    <div class="cap-env-detail-grid">
+      <div>
+        <span class="cap-env-card-label">Draft Items</span>
+        <p>{{ dispatch_spec.items|length }} total</p>
+      </div>
+      <div>
+        <span class="cap-env-card-label">Ready to Publish</span>
+        <p>{{ validated_count }} validated / {{ draft_count }} still draft</p>
+      </div>
+      <div>
+        <span class="cap-env-card-label">Publication Records</span>
+        <p>{{ dispatch_history|length }} record{{ 's' if dispatch_history|length != 1 else '' }}</p>
+      </div>
+      <div>
+        <span class="cap-env-card-label">Live Installed Items</span>
+        <p>{{ published_count }}</p>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="cap-env-dispatch-actions">
+      {% if dispatch_draft.lifecycle_state == "draft" %}
+      <button type="button" class="btn btn-sm" onclick="dispatchValidate('{{ dispatch_draft.id }}')">Validate Draft</button>
+      <button type="button" class="btn btn-primary btn-sm" onclick="dispatchPublish('{{ dispatch_draft.id }}')">Publish Draft</button>
+      {% endif %}
+      <button type="button" class="btn btn-sm" onclick="loadDispatchExport('{{ dispatch_draft.id }}')">Generate Export</button>
+    </div>
+
+    <div class="cap-env-surface-card cap-env-surface-card--inset">
+      <span class="cap-env-card-label">Install Rule</span>
+      <p>
+        Publish is allowed only when the draft items are executable-ready. Draft publication candidates may still
+        be recorded, but the final meaning of publish is replacement of live installed platform truth.
+      </p>
+    </div>
+
+    <div id="dispatch-feedback" class="cap-env-inline-hint" aria-live="polite"></div>
+    <div id="dispatch-error" class="cap-env-inline-error" hidden></div>
+
+    <div id="dispatch-export" class="cap-env-export-block" hidden>
+      <span class="cap-env-card-label">Export Handoff</span>
+      <pre id="dispatch-export-text" class="cap-env-code-block"></pre>
+      <div class="cap-env-form-actions">
+        <button type="button" class="btn btn-sm" onclick="copyDispatchExport(event)">Copy Export</button>
+      </div>
+    </div>
+  </section>
+  {% else %}
+  <section class="cap-env-surface-card">
+    <div class="cap-env-empty-state">
+      <p>Select a draft first. Dispatch is draft-contextual underneath the current system.</p>
+    </div>
+  </section>
+  {% endif %}
+
+  <section class="cap-env-surface-card">
+    <div class="cap-env-surface-card-head">
+      <div>
+        <span class="cap-env-card-label">Draft Selector</span>
+        <h3>Choose a draft for dispatch</h3>
+      </div>
+    </div>
+
+    {% if drafts %}
+    <div class="cap-env-table-wrap">
+      <table class="cap-env-table">
+        <thead>
+          <tr>
+            <th>Draft</th>
+            <th>State</th>
+            <th>Version</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for record in drafts %}
+          <tr>
+            <td>
+              <strong>{{ record.name }}</strong>
+              <div class="cap-env-inline-hint">{{ record.description or "No draft description yet." }}</div>
+            </td>
+            <td>
+              <span class="badge {% if record.lifecycle_state == 'published' %}badge-completed{% elif record.lifecycle_state == 'retired' %}badge-inactive{% else %}badge-running{% endif %}">
+                {{ record.lifecycle_state }}
+              </span>
+            </td>
+            <td class="cell-mono">{{ record.version }}</td>
+            <td class="cap-env-table-actions">
+              {% if current_draft %}
+              <a
+                href="{{ draft_station_urls[record.id].dispatch_bench }}"
+                class="btn btn-sm"
+                data-cap-env-leave="true">
+                Open Dispatch
+              </a>
+              {% else %}
+              <a href="{{ draft_station_urls[record.id].dispatch_bench }}" class="btn btn-sm" data-cap-env-leave="true">
+                Open Dispatch
+              </a>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="cap-env-empty-state">
+      <p>No drafts are available for dispatch yet.</p>
+    </div>
+    {% endif %}
+  </section>
+</div>

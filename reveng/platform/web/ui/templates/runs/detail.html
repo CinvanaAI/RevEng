@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+{% set active_nav = "runs" %}
+
+{% block title %}Run {{ run.id[:8] }} — RevEng{% endblock %}
+{% block page_title %}Run Detail{% endblock %}
+
+{% block topbar_actions %}
+  <a href="/runs" class="btn btn-ghost">← Runs</a>
+{% endblock %}
+
+{% block content %}
+
+<!-- Status header -->
+<div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap;">
+  <span class="badge badge-{{ run.status }}" style="font-size:.85rem;padding:.4rem .85rem;">
+    {{ run.status | upper }}
+  </span>
+  {% if is_active %}
+    <span class="spinner"></span>
+    <span style="color:var(--text-muted);font-size:.875rem;">Analysis in progress…</span>
+  {% elif run.status == 'completed' %}
+    <span style="color:var(--green);font-size:.875rem;">Analysis completed successfully.</span>
+  {% elif run.status == 'failed' %}
+    <span style="color:var(--red);font-size:.875rem;">{{ run.error_message or 'Analysis failed.' }}</span>
+  {% endif %}
+</div>
+
+<!-- Metadata -->
+<div class="meta-grid" style="margin-bottom:1.5rem;">
+  <div class="meta-item">
+    <div class="meta-label">Run ID</div>
+    <div class="meta-value mono">{{ run.id }}</div>
+  </div>
+  <div class="meta-item">
+    <div class="meta-label">Target</div>
+    <div class="meta-value mono" style="word-break:break-all;">{{ run.repo_path }}</div>
+  </div>
+  <div class="meta-item">
+    <div class="meta-label">Output Dir</div>
+    <div class="meta-value mono" style="word-break:break-all;">{{ run.output_dir }}</div>
+  </div>
+  <div class="meta-item">
+    <div class="meta-label">Started</div>
+    <div class="meta-value mono">{{ run.started_at[:19].replace('T', ' ') if run.started_at else '—' }}</div>
+  </div>
+  <div class="meta-item">
+    <div class="meta-label">Finished</div>
+    <div class="meta-value mono">{{ run.finished_at[:19].replace('T', ' ') if run.finished_at else '—' }}</div>
+  </div>
+  <div class="meta-item">
+    <div class="meta-label">Options</div>
+    <div class="meta-value mono" style="font-size:.72rem;">
+      {% set opts = [] %}
+      {% if run.options.get('with_ai') %}{% set _ = opts.append('with-ai') %}{% endif %}
+      {% if run.options.get('layered') %}{% set _ = opts.append('layered') %}{% endif %}
+      {% if run.options.get('ai_limit') %}{% set _ = opts.append('ai-limit=' ~ run.options.ai_limit) %}{% endif %}
+      {{ opts | join(', ') if opts else 'default' }}
+    </div>
+  </div>
+  <div class="meta-item">
+    <div class="meta-label">Provider</div>
+    <div class="meta-value mono">
+      {% if run.options.get('provider_id') %}
+        {{ run.options.get('provider_id') }}
+        {% if run.options.get('provider_model') %} · {{ run.options.get('provider_model') }}{% endif %}
+      {% elif run.options.get('with_ai') or run.options.get('layered') %}
+        unresolved
+      {% else %}
+        —
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Event Log -->
+<div class="card" style="margin-bottom:1.5rem;">
+  <div class="card-header">
+    <span class="card-title">Event Log</span>
+    {% if is_active %}
+      <span style="font-size:.75rem;color:var(--text-muted);">
+        <span class="spinner" style="width:8px;height:8px;border-width:1px;"></span>
+        Polling every 3s
+      </span>
+    {% endif %}
+  </div>
+
+  <div class="event-log" id="event-log">
+    <div id="event-log-inner">
+      {% if events %}
+        {% for ev in events %}
+        <div class="event-row">
+          <span class="event-ts">{{ ev.created_at[11:23] }}</span>
+          <span class="event-type event-type-{{ ev.event_type }}">{{ ev.event_type }}</span>
+          <span class="event-payload">
+            {%- if ev.event_type == 'status_change' -%}
+              {{ ev.payload.get('old', '') }} → {{ ev.payload.get('new', '') }}
+            {%- elif ev.event_type == 'output_ready' -%}
+              {{ ev.payload.get('key', '') }}: {{ ev.payload.get('path', '') }}
+            {%- elif ev.event_type == 'error' -%}
+              {{ ev.payload.get('message', '') }}
+            {%- else -%}
+              {{ ev.payload.get('message', ev.payload | string) }}
+            {%- endif -%}
+          </span>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="event-row">
+          <span class="event-ts">—</span>
+          <span class="event-type event-type-info">info</span>
+          <span class="event-payload">Waiting for events…</span>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Outputs -->
+{% if outputs %}
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">Output Artifacts</span>
+    <span style="color:var(--text-muted);font-size:.8rem;">{{ outputs|length }} artifact{{ 's' if outputs|length != 1 }}</span>
+  </div>
+  <div class="card-body">
+    <div class="output-list">
+      {% for out in outputs %}
+      <div class="output-item">
+        <span class="output-key">{{ out.output_key }}</span>
+        <span class="output-type-badge">{{ out.output_type }}</span>
+        <span class="output-value" title="{{ out.value }}">{{ out.value }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% elif run.status == 'completed' %}
+<div class="card">
+  <div class="card-header"><span class="card-title">Output Artifacts</span></div>
+  <div class="empty-state">No outputs were recorded for this run.</div>
+</div>
+{% endif %}
+
+{% if is_active %}
+<script>
+// Poll the local RevEng API without loading third-party browser scripts.
+var pollStopped = false;
+
+function renderEvents(resp) {
+  if (!resp || !resp.events) return;
+
+  var inner = document.getElementById('event-log-inner');
+  var html = '';
+  resp.events.forEach(function(ev) {
+    var payload = '';
+    if (ev.event_type === 'status_change') {
+      payload = (ev.payload.old || '') + ' → ' + (ev.payload.new || '');
+    } else if (ev.event_type === 'output_ready') {
+      payload = (ev.payload.key || '') + ': ' + (ev.payload.path || '');
+    } else if (ev.event_type === 'error') {
+      payload = ev.payload.message || JSON.stringify(ev.payload);
+    } else {
+      payload = ev.payload.message || JSON.stringify(ev.payload);
+    }
+    var ts = ev.created_at ? ev.created_at.substring(11, 23) : '—';
+    html += '<div class="event-row">' +
+      '<span class="event-ts">' + ts + '</span>' +
+      '<span class="event-type event-type-' + ev.event_type + '">' + ev.event_type + '</span>' +
+      '<span class="event-payload">' + escHtml(payload) + '</span>' +
+      '</div>';
+  });
+  if (html) { inner.innerHTML = html; }
+  scrollEventLog();
+
+  // Check if run is complete — stop polling
+  resp.events.forEach(function(ev) {
+    if (ev.event_type === 'status_change' &&
+        (ev.payload.new === 'completed' || ev.payload.new === 'failed')) {
+      // Remove HTMX polling attrs and reload to get final state
+      setTimeout(function() { window.location.reload(); }, 800);
+      pollStopped = true;
+    }
+  });
+}
+
+function pollEvents() {
+  if (pollStopped) return;
+  fetch('/api/runs/{{ run.id }}/events', {
+    headers: { 'Accept': 'application/json' }
+  })
+    .then(function(response) {
+      if (!response.ok) throw new Error('event poll failed');
+      return response.json();
+    })
+    .then(renderEvents)
+    .catch(function() { /* The next interval retries quietly. */ });
+}
+
+function scrollEventLog() {
+  var log = document.getElementById('event-log');
+  log.scrollTop = log.scrollHeight;
+}
+
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// Initial scroll
+scrollEventLog();
+window.setInterval(pollEvents, 3000);
+</script>
+{% endif %}
+
+{% endblock %}

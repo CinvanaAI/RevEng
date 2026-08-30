@@ -1,0 +1,80 @@
+<div class="cap-env-surface-stack">
+  <section class="cap-env-surface-card cap-env-surface-card--accent">
+    <span class="cap-env-card-label">Persistent Draft Inventory</span>
+    <h3>Open the existing saved-draft list</h3>
+    <p>
+      This is the platform-backed draft inventory surfaced through the environment workbench.
+      Select a draft to enter the existing bench view, or open create draft if you need a new draft.
+    </p>
+  </section>
+
+  <section class="cap-env-surface-card">
+    <div class="cap-env-surface-card-head">
+      <div>
+        <span class="cap-env-card-label">Workbench</span>
+        <h3>{{ drafts|length }} draft{{ 's' if drafts|length != 1 else '' }} in the room</h3>
+      </div>
+      <a href="{{ station_urls.create_draft }}" class="btn btn-sm" data-cap-env-leave="true">Create Draft</a>
+    </div>
+
+    {% if drafts %}
+    <div class="cap-env-table-wrap">
+      <table class="cap-env-table">
+        <thead>
+          <tr>
+            <th>Draft</th>
+            <th>State</th>
+            <th>Version</th>
+            <th>Updated</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for draft in drafts %}
+          <tr>
+            <td>
+              <strong>{{ draft.name }}</strong>
+              <div class="cap-env-inline-hint">{{ draft.description or "No draft description yet." }}</div>
+            </td>
+            <td>
+              <span class="badge {% if draft.lifecycle_state == 'published' %}badge-completed{% elif draft.lifecycle_state == 'retired' %}badge-inactive{% else %}badge-running{% endif %}">
+                {{ draft.lifecycle_state }}
+              </span>
+            </td>
+            <td class="cell-mono">{{ draft.version }}</td>
+            <td class="cell-mono">{{ draft.updated_at[:16] }}</td>
+            <td class="cap-env-table-actions">
+              <a
+                href="{{ draft_station_urls[draft.id].workbench }}"
+                class="btn btn-sm"
+                data-cap-env-leave="true">
+                Open Draft
+              </a>
+              <a
+                href="{{ draft_station_urls[draft.id].dispatch_bench }}"
+                class="btn btn-sm"
+                data-cap-env-leave="true">
+                Dispatch
+              </a>
+              {% if draft.lifecycle_state == "draft" %}
+              <button
+                type="button"
+                class="btn btn-sm btn-danger"
+                onclick="deleteDraft('{{ draft.id }}', '{{ draft.name|escape }}', {{ station_urls.workbench|tojson }})">
+                Delete
+              </button>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="cap-env-empty-state">
+      <p>No drafts are stored in the workshop yet.</p>
+      <a href="{{ station_urls.create_draft }}" class="btn btn-primary" data-cap-env-leave="true">Create the first draft</a>
+    </div>
+    {% endif %}
+  </section>
+</div>

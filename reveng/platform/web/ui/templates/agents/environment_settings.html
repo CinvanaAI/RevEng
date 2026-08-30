@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% set active_nav = "agents" %}
+
+{% block title %}Agent Environment Settings - RevEng{% endblock %}
+{% block page_title %}Agent Environment Settings{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ agent_environment_entry_path }}" class="btn btn-ghost">Agent Hall</a>
+  <a href="/agents" class="btn btn-ghost">Agents</a>
+{% endblock %}
+
+{% block content %}
+{% if page_notice or page_error %}
+<div class="card" style="margin-bottom:1rem;border-color:{% if page_error %}rgba(255,112,112,.28){% else %}rgba(72,204,154,.28){% endif %};background:{% if page_error %}rgba(125,35,46,.18){% else %}rgba(18,96,73,.18){% endif %};">
+  <div class="card-body">{{ page_error or page_notice }}</div>
+</div>
+{% endif %}
+
+<div class="card" style="margin-bottom:1rem;">
+  <div class="card-header">
+    <span class="card-title">{{ theme.display_name }} Shared Background Pool</span>
+    <span style="color:var(--text-muted);font-size:.8rem;">Bootstraps from root files matching <span class="cell-mono">{{ theme.bootstrap_glob }}</span></span>
+  </div>
+  <div class="card-body" style="display:grid;gap:1rem;">
+    <div style="color:var(--text-muted);font-size:.9rem;line-height:1.6;">
+      Shared uploads expand the {{ theme.display_name }} pool only. Agent-specific custom backgrounds are configured inside each agent chamber and do not enter this shared pool.
+    </div>
+    <form method="post"
+          action="/agents/environment-settings/shared-backgrounds"
+          enctype="multipart/form-data"
+          style="display:flex;gap:.75rem;align-items:end;flex-wrap:wrap;">
+      <label style="display:grid;gap:.35rem;min-width:280px;">
+        <span style="font-size:.78rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;">Upload Shared Background</span>
+        <input type="file" name="background_file" accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp">
+      </label>
+      <button type="submit" class="btn btn-primary">Add to Shared Pool</button>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">Available Shared Backgrounds</span>
+    <span style="color:var(--text-muted);font-size:.8rem;">{{ shared_backgrounds|length }} asset{{ 's' if shared_backgrounds|length != 1 }}</span>
+  </div>
+  <div class="card-body">
+    {% if shared_backgrounds %}
+    <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(240px, 1fr));gap:1rem;">
+      {% for item in shared_backgrounds %}
+      <article style="border:1px solid var(--border);border-radius:16px;overflow:hidden;background:var(--surface-2);">
+        <div style="height:180px;background-image:url('{{ item.asset_url }}');background-size:cover;background-position:center;"></div>
+        <div style="padding:1rem;display:grid;gap:.35rem;">
+          <strong>{{ item.asset.display_name }}</strong>
+          <div style="color:var(--text-muted);font-size:.82rem;">{{ item.asset.original_filename }}</div>
+          <div style="display:flex;gap:.45rem;flex-wrap:wrap;">
+            <span class="tag">{{ item.asset.source_kind }}</span>
+            <span class="tag">{{ theme.display_name }}</span>
+          </div>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <p>No shared backgrounds are registered yet.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

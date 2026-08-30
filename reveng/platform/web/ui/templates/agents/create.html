@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% set active_nav = "agents" %}
+
+{% block title %}New Agent — RevEng{% endblock %}
+{% block page_title %}New Agent{% endblock %}
+
+{% block topbar_actions %}
+  <a href="/agents" class="btn btn-ghost">← Back</a>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:680px;">
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Create Agent</span>
+    </div>
+    <div class="card-body">
+
+      <div class="alert alert-info" style="margin-bottom:1.25rem;">
+        New agents are created <strong>inactive</strong> by default.
+        Activate from the agent list when ready to use.
+      </div>
+
+      <form method="post" action="/agents/new">
+
+        <div class="form-group">
+          <label class="form-label" for="name">Name *</label>
+          <input class="form-control" id="name" name="name" type="text"
+                 placeholder="e.g. Code Reviewer" required autofocus>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="description">Description</label>
+          <input class="form-control" id="description" name="description" type="text"
+                 placeholder="What does this agent do?">
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+          <div class="form-group">
+            <label class="form-label" for="provider_id">Provider *</label>
+            {% if providers %}
+            <select class="form-control" id="provider_id" name="provider_id" required>
+              {% for p in providers %}
+              <option value="{{ p.id }}">{{ p.label }} ({{ p.kind }})</option>
+              {% endfor %}
+            </select>
+            {% else %}
+            <div class="alert alert-error" style="margin:0;">
+              No providers configured. Add OPENAI_API_KEY or OLLAMA_BASE_URL to .env and restart.
+            </div>
+            <input type="hidden" name="provider_id" value="">
+            {% endif %}
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="model">Model *</label>
+            <input class="form-control" id="model" name="model" type="text"
+                   placeholder="e.g. gpt-4o-mini" required>
+            <span class="form-hint">Model name as accepted by your provider</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="system_prompt">System Prompt</label>
+          <textarea class="form-control" id="system_prompt" name="system_prompt"
+                    placeholder="You are a specialized agent that…" rows="6"></textarea>
+        </div>
+
+        <div class="alert alert-info" style="margin:0 0 1.25rem;">
+          Tool assignment now lives in Agent Environment. Create the agent first, then grant installed
+          capability packages from that environment's Tools Station.
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary" {% if not providers %}disabled{% endif %}>
+            Create Agent
+          </button>
+          <a href="/agents" class="btn btn-ghost">Cancel</a>
+        </div>
+
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
