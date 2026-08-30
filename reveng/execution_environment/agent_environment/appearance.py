@@ -365,7 +365,8 @@ class AgentEnvironmentAppearanceService:
         }
 
     def asset_url_for(self, storage_path: str) -> str:
-        return f"{self.ASSET_URL_PREFIX}/{quote(storage_path.replace('\\', '/'), safe='/')}"
+        normalized_path = storage_path.replace("\\", "/")
+        return f"{self.ASSET_URL_PREFIX}/{quote(normalized_path, safe='/')}"
 
     def _create_asset(
         self,
