@@ -1,20 +1,42 @@
 """Read-only filesystem explorer support for Agent Environment pickers."""
 from __future__ import annotations
 
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Union
 
 
 class FilesystemExplorerService:
-    def resolve_root(self, root_path: Union[str, Path, None] = None) -> Path:
+    @staticmethod
+    def _as_directory(path: Union[str, Path]) -> Path:
+        resolved = Path(path).expanduser().resolve()
+        return resolved.parent if resolved.is_file() else resolved
+
+    @staticmethod
+    def _is_within(path: Path, root: Path) -> bool:
+        try:
+            path.relative_to(root)
+            return True
+        except ValueError:
+            return False
+
+    def resolve_root(
+        self,
+        root_path: Union[str, Path, None] = None,
+        *,
+        allowed_roots: Iterable[Union[str, Path]] | None = None,
+    ) -> Path:
         if isinstance(root_path, Path):
-            root = root_path.expanduser().resolve()
+            root = self._as_directory(root_path)
         elif isinstance(root_path, str) and root_path.strip():
-            root = Path(root_path).expanduser().resolve()
+            root = self._as_directory(root_path)
         else:
             root = Path.cwd().resolve()
-        if root.is_file():
-            return root.parent
+
+        allowed = [self._as_directory(path) for path in (allowed_roots or [])]
+        allowed = list(dict.fromkeys(allowed))
+        if allowed and not any(self._is_within(root, candidate) for candidate in allowed):
+            return allowed[0]
         return root
 
     def resolve_current_path(
@@ -22,8 +44,9 @@ class FilesystemExplorerService:
         *,
         root_path: Union[str, Path, None] = None,
         current_path: Union[str, Path, None] = None,
+        allowed_roots: Iterable[Union[str, Path]] | None = None,
     ) -> tuple[Path, Path]:
-        root = self.resolve_root(root_path)
+        root = self.resolve_root(root_path, allowed_roots=allowed_roots)
         if isinstance(current_path, Path):
             current = current_path.expanduser().resolve()
         elif isinstance(current_path, str) and current_path.strip():
@@ -43,8 +66,13 @@ class FilesystemExplorerService:
         *,
         root_path: Union[str, Path, None] = None,
         current_path: Union[str, Path, None] = None,
+        allowed_roots: Iterable[Union[str, Path]] | None = None,
     ) -> dict[str, object]:
-        root, current = self.resolve_current_path(root_path=root_path, current_path=current_path)
+        root, current = self.resolve_current_path(
+            root_path=root_path,
+            current_path=current_path,
+            allowed_roots=allowed_roots,
+        )
         entries: list[dict[str, object]] = []
         if current.exists() and current.is_dir():
             for entry in sorted(current.iterdir(), key=lambda item: (not item.is_dir(), item.name.lower())):

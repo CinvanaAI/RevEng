@@ -1,15 +1,15 @@
 # RevEng
 
-RevEng is a local-first Python repository analysis system with a visual control center for running analyses, inspecting evidence, composing reusable capabilities, and governing which tools and files an agent may use.
+RevEng is a local-first Python source-comprehension and architecture-recovery system with a visual control center for running analyses, inspecting evidence, composing reusable capabilities, and governing which tools and files an agent may use.
 
 The repository contains a working system—not a UI mockup. A fresh database is migrated and seeded at startup with 52 executable capabilities and three analysis workflows. Static analysis works without an API key; model-assisted narration is optional.
 
 ## What it demonstrates
 
 - Multi-pass Python repository mapping: inventory, relationships, file breakdowns, clusters, flows, dossier generation, validation, and explicit unknowns.
-- A layered meaning pipeline that derives actions, functions, file purpose and behavior, workflows, modules, subsystems, and a provisional system summary.
+- An evidence-linked, heuristic meaning pipeline that derives actions, functions, file purpose and behavior, workflows, modules, subsystems, and a provisional system summary from Python syntax and call patterns.
 - A storage-backed capability platform with contracts, executable bindings, composite capabilities, draft validation, publication history, and rollback.
-- Agent-scoped tool grants and file keycards enforced at the runtime boundary.
+- Agent-scoped capability grants checked at every runtime invocation, with keycards constraining the file inputs exposed to built-in analysis tools.
 - Durable SQLite state for agents, runs, events, outputs, capabilities, permissions, and migrations.
 - A FastAPI/Jinja control center plus an optional native desktop shell.
 
@@ -54,6 +54,13 @@ python desktop.py
 
 No provider credentials are needed for the static workflows. To enable model-assisted analysis, copy `.env.example` to `.env` and configure an OpenAI-compatible provider.
 
+User-authored capability and agent-workflow Python is disabled by default. It runs in-process with the same operating-system access as RevEng; it is not sandboxed. After reviewing the code, an operator can explicitly enable it for that process:
+
+```powershell
+$env:REVENG_ENABLE_AUTHORED_CODE = "1"
+python server.py
+```
+
 ## Testing
 
 ```powershell
@@ -66,11 +73,14 @@ The suite exercises database migrations, capability publication and rollback, pe
 
 RevEng is designed for local use. Its database, `.env`, generated artifacts, test workspaces, and copied agent assets are ignored by Git. The browser UI loads its application assets locally and does not depend on a third-party JavaScript CDN. Network requests occur only when a user configures and invokes a remote model provider (or follows the WebView2 installation link shown by the desktop launcher).
 
-The application has no authentication layer. Keep the default `127.0.0.1` binding; do not expose it directly to a network. See [SECURITY.md](SECURITY.md) and [ASSETS.md](ASSETS.md) before publishing or redistributing the project.
+The HTTP boundary rejects non-loopback peers, non-local Host headers, and cross-origin browser mutations. This protects the local browser surface from ordinary CSRF and DNS-rebinding requests; it is not multi-user authentication and does not defend against another process already running as the same OS user. Keep the default `127.0.0.1` binding and do not expose RevEng to a network. See [SECURITY.md](SECURITY.md) and [ASSETS.md](ASSETS.md) before publishing or redistributing the project.
 
 ## Current scope
 
 - Repository analysis targets Python source code.
+- Meaning outputs are evidence-linked heuristics, not universal program semantics.
+- Keycards scope inputs passed through RevEng tools; they are not an operating-system filesystem sandbox.
+- User-authored Python is trusted code and requires the explicit `REVENG_ENABLE_AUTHORED_CODE=1` process setting.
 - Model-assisted output depends on the configured provider and is not required for core analysis.
 - Capability uninstall/deprecation and stored revision diffs are not yet exposed in the UI.
 - The desktop packaging specification is development-ready but not a signed installer pipeline.

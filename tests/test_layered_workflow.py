@@ -8,6 +8,7 @@ import unittest
 from pathlib import Path
 
 from reveng.coordination.host_composition import build_default_host
+from reveng.framework.permissions import trusted_local_capability_check
 from reveng.analysis_engine.workflows.layered_breakdown import WORKFLOW_ID as LAYERED_WORKFLOW_ID
 from reveng.analysis_engine.workflows.repo_analysis import WORKFLOW_ID, WORKFLOW_WITH_AI_ID
 from reveng.storage.db_connection import init_db
@@ -161,6 +162,7 @@ class LayeredWorkflowRunTests(unittest.TestCase):
             inputs={"repo_path": str(self.repo_dir)},
             output_dir=self.output_dir,
             run_id="test-layered",
+            permission_check=trusted_local_capability_check,
         )
         self.outputs = result.outputs
         self.meaning_dir = self.output_dir / "meaning"
@@ -276,6 +278,7 @@ class LayeredWorkflowRunTests(unittest.TestCase):
             inputs={"repo_path": str(self.repo_dir)},
             output_dir=self.output_dir,
             run_id="test-layered-2",
+            permission_check=trusted_local_capability_check,
         )
         outputs = result.outputs
         self.assertTrue(

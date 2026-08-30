@@ -51,6 +51,7 @@ from reveng.platform.services.provider_service import ProviderService
 from reveng.platform.services.run_service import RunService
 from reveng.platform.services.shared_capability_registry import SharedCapabilityRegistry
 from reveng.platform.services.capability_package_service import CapabilityPackageService
+from reveng.platform.web.security import LocalRequestGuardMiddleware
 from reveng.storage.system_db import ensure_system_db_ready
 
 _STATIC_DIR = Path(__file__).parent / "ui" / "static"
@@ -199,9 +200,10 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="RevEng Control Center",
         description="Agent platform and analysis runner for RevEng",
-        version="0.1.0",
+        version="0.2.0",
         lifespan=lifespan,
     )
+    app.add_middleware(LocalRequestGuardMiddleware)
 
     # Static files (CSS, vendored JS)
     if _STATIC_DIR.exists():

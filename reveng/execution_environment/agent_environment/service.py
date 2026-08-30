@@ -364,6 +364,14 @@ class AgentEnvironmentService:
         return_to_query: str,
     ) -> dict[str, Any]:
         assignments = self._keycards.list_assignments(agent_id)
+        allowed_explorer_roots: list[Path] = [Path.cwd().resolve()]
+        if fallback_root_path:
+            allowed_explorer_roots.append(Path(fallback_root_path).expanduser().resolve())
+        for assignment in assignments:
+            if assignment.root_path:
+                allowed_explorer_roots.append(
+                    Path(assignment.root_path).expanduser().resolve()
+                )
         visible_path_set = {assignment.absolute_path for assignment in assignments}
         visible_files = [
             {
@@ -381,6 +389,7 @@ class AgentEnvironmentService:
         explorer = self._explorer.list_directory(
             root_path=explorer_root_path or fallback_root_path,
             current_path=explorer_current_path,
+            allowed_roots=allowed_explorer_roots,
         )
         explorer_root = str(explorer["root_path"])
         explorer_current = str(explorer["current_path"])

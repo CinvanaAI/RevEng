@@ -13,6 +13,14 @@ from typing import Any, Iterable
 from reveng.framework.runtime import WorkflowRuntime
 
 CapabilityCall = tuple[str, dict[str, Any]]
+MAX_PARALLEL_WORKERS = 8
+
+
+def bounded_worker_count(requested_workers: int | None, task_count: int) -> int:
+    if task_count <= 0:
+        return 0
+    requested = requested_workers or task_count
+    return max(1, min(int(requested), task_count, MAX_PARALLEL_WORKERS))
 
 
 class AgenticExecutor:
@@ -34,8 +42,7 @@ class AgenticExecutor:
         if not ordered_calls:
             return []
 
-        requested_workers = max_workers or len(ordered_calls)
-        worker_count = max(1, min(int(requested_workers), len(ordered_calls)))
+        worker_count = bounded_worker_count(max_workers, len(ordered_calls))
 
         with ThreadPoolExecutor(
             max_workers=worker_count,
@@ -46,3 +53,11 @@ class AgenticExecutor:
                 for capability_id, inputs in ordered_calls
             ]
             return [future.result() for future in futures]
+
+
+__all__ = [
+    "AgenticExecutor",
+    "CapabilityCall",
+    "MAX_PARALLEL_WORKERS",
+    "bounded_worker_count",
+]

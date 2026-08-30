@@ -996,7 +996,7 @@ def run_trigger(
     layered: str | None = Form(None),
     ai_limit: str = Form(""),
     extractor_workers: int = Form(6),
-    ai_file_workers: int = Form(10),
+    ai_file_workers: int = Form(8),
     env_file: str = Form(".env"),
     run_svc: RunService = Depends(get_run_service),
     event_svc: EventService = Depends(get_event_service),

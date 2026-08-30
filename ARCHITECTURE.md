@@ -19,7 +19,7 @@ RevEng separates repository interpretation, runtime execution, platform authorit
 1. A run is submitted from the API or control center.
 2. Platform services resolve the agent, provider, tool grants, and visible file keycard.
 3. Coordination builds a host using the storage-backed capability catalog.
-4. The runtime checks capability permission before every invocation.
+4. The runtime checks capability permission before every invocation and denies calls when no policy is wired. Trusted built-in runs pass an explicit local policy; agent workflows use agent grants and file permissions.
 5. Analysis capabilities produce staged artifacts: inventory, relations, breakdowns, clusters, flows, reports, and optional meaning records.
 6. Run status, events, framework logs, and output references are persisted to SQLite.
 
@@ -36,8 +36,10 @@ The catalog is authoritative; an in-memory registry is only an execution project
 
 ## Trust boundaries
 
-- File access is scoped by the agent keycard and tool-file permission service.
-- Capability use is scoped by agent assignments and checked inside `WorkflowRuntime.invoke`.
+- Keycards scope file inputs supplied through cooperating RevEng tools; they are not an OS-level sandbox.
+- Capability use is scoped by agent assignments and checked inside `WorkflowRuntime.invoke`; a missing policy fails closed.
+- Authored capability and workflow Python executes in-process only after explicit operator opt-in. It must be treated as trusted code with full process privileges.
+- The HTTP request guard accepts loopback clients and local Host headers, and rejects cross-origin mutations. It is a browser/request boundary, not multi-user authentication.
 - Provider secrets are read from a local `.env` file and are never stored in the repository.
-- The server is intended for localhost and has no built-in authentication.
+- The server is restricted to localhost and is not designed for shared or network deployment.
 - Generated databases and analysis artifacts may contain source paths or repository content and must not be committed.

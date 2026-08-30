@@ -93,14 +93,8 @@ class FrameworkLoggingTests(unittest.TestCase):
         self.assertIn("capability_invocation_completed", event_types)
         self.assertIn("workflow_execution_completed", event_types)
         self.assertIn("artifact_recorded", event_types)
-        self.assertTrue(
-            any(
-                log.event_type == "permission_check_missing"
-                and log.boundary_sensitive
-                and log.architectural_drift_detected
-                for log in logs
-            )
-        )
+        self.assertIn("permission_check_allowed", event_types)
+        self.assertNotIn("permission_check_missing", event_types)
 
     def test_platform_inventory_reads_from_storage_backed_catalog(self) -> None:
         inventory = platform_inventory(catalog=CapabilityCatalogService())

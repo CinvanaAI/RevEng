@@ -115,18 +115,21 @@ class WorkflowRuntime:
             self._emit(
                 stage="boundary",
                 event_type="permission_check_missing",
-                level="warning",
-                status="observed",
+                level="error",
+                status="denied",
                 capability_id=capability_id,
                 trigger="WorkflowRuntime.invoke",
-                message="Framework proceeded without a permission boundary because no permission check was wired.",
+                message="Framework denied capability invocation because no permission check was wired.",
                 details={
                     **input_summary,
-                    "framework_allowed_to_proceed": True,
+                    "framework_allowed_to_proceed": False,
                 },
                 boundary_sensitive=True,
                 compensating_for_smeared_responsibility=True,
                 architectural_drift_detected=True,
+            )
+            raise PermissionError(
+                f"Permission check missing for capability: {capability_id!r}"
             )
 
         self._emit(

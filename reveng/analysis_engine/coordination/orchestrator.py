@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from reveng.coordination.host_composition import build_default_host
 from reveng.coordination.result_contract import make_error, make_ok
+from reveng.framework.permissions import trusted_local_capability_check
 from reveng.storage.framework_logs import build_framework_log_sink
 from reveng.analysis_engine.workflows.layered_breakdown import WORKFLOW_ID as LAYERED_WORKFLOW_ID
 from reveng.analysis_engine.workflows.repo_analysis import WORKFLOW_ID, WORKFLOW_WITH_AI_ID
@@ -50,7 +51,7 @@ def run(inputs: dict, output_dir: str, run_id: str, *, provider=None, permission
             inputs=inputs,
             output_dir=output_dir,
             run_id=run_id,
-            permission_check=permission_check,
+            permission_check=permission_check or trusted_local_capability_check,
         )
         return make_ok(
             AGENT_ID,

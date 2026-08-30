@@ -31,6 +31,7 @@ from reveng.platform.capabilities import (
     CapabilityDefinition,
     CombinationSpec,
 )
+from reveng.framework.trusted_code import require_authored_code_execution_enabled
 
 
 CapabilityBindingResolver = Callable[[str], Any]
@@ -51,6 +52,7 @@ def _make_code_block_callable(
     Python's standard import system is available inside the exec'd code because
     the execution namespace is seeded with __builtins__.
     """
+    require_authored_code_execution_enabled("stored capability code")
     if not code_block:
         raise ValueError(
             f"capability_id={capability_id!r} has execution_source='code_block' "
@@ -79,6 +81,7 @@ def _import_generated_callable(capability_id: str, entrypoint: str = "run") -> C
     Published Python artifacts live at:
         reveng/capabilities/packages/<safe_id>/published/python/implementation.py
     """
+    require_authored_code_execution_enabled("generated capability code")
     import importlib
 
     # Sanitize capability_id into a valid Python module path component.

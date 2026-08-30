@@ -40,7 +40,7 @@ class TriggerRun(BaseModel):
     layered: bool = False
     ai_limit: int | None = None
     extractor_workers: int = 6
-    ai_file_workers: int = 10
+    ai_file_workers: int = 8
     env_file: str = ".env"
     agent_id: str | None = None
 

@@ -6,6 +6,7 @@ from pathlib import Path
 import shutil
 
 from reveng.coordination.host_composition import build_default_host
+from reveng.framework.permissions import trusted_local_capability_check
 from reveng.analysis_engine.workflows.repo_analysis import WORKFLOW_ID, WORKFLOW_WITH_AI_ID
 from reveng.storage.db_connection import init_db
 from reveng.storage.system_db import ensure_system_db_ready
@@ -83,6 +84,7 @@ class HostWorkflowTests(unittest.TestCase):
                 inputs={"repo_path": str(repo_dir)},
                 output_dir=output_dir,
                 run_id="test-run",
+                permission_check=trusted_local_capability_check,
             )
 
             outputs = result.outputs

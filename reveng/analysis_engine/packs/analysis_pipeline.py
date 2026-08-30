@@ -22,6 +22,7 @@ from reveng.platform.capabilities import (
     CapabilityDefinition,
     CapabilityRegistry,
 )
+from reveng.coordination.execution import bounded_worker_count
 
 PACK_ID = "reveng.pack.analysis_pipeline"
 
@@ -51,7 +52,9 @@ def _analysis_extract_files(context: CapabilityContext) -> dict[str, Any]:
                 "parse_error": f"SyntaxError: {exc}",
             }
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as pool:
+    with concurrent.futures.ThreadPoolExecutor(
+        max_workers=bounded_worker_count(workers, len(file_paths)) or 1
+    ) as pool:
         futures = {pool.submit(_extract, fp): fp for fp in file_paths}
         file_records = [f.result() for f in concurrent.futures.as_completed(futures)]
 
@@ -164,7 +167,7 @@ def _analysis_narrate(context: CapabilityContext) -> dict[str, Any]:
     repo_root: str = context.require("repo_root")
     scanned_at: str = context.require("scanned_at")
     env_file: str = context.get("env_file") or ".env"
-    ai_file_workers = int(context.get("ai_file_workers") or 10)
+    ai_file_workers = int(context.get("ai_file_workers") or 8)
     ai_limit = context.get("ai_limit")
 
     cluster_map_ref = context.require("cluster_map")

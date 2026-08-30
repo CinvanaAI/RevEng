@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-import concurrent.futures
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 from reveng.framework import WorkflowDefinition, WorkflowRegistry, WorkflowRuntime
 from reveng.analysis_engine.packs import llm_narration, python_static
+from reveng.coordination.execution import AgenticExecutor
 from reveng.storage.paths import (
     ai_cluster_summaries_json_path,
     ai_file_explanations_json_path,
@@ -15,7 +15,7 @@ from reveng.storage.paths import (
 )
 
 DEFAULT_EXTRACTOR_WORKERS = 6
-DEFAULT_AI_FILE_WORKERS = 10
+DEFAULT_AI_FILE_WORKERS = 8
 
 WORKFLOW_ID = "reveng.workflow.repo_analysis"
 WORKFLOW_WITH_AI_ID = "reveng.workflow.repo_analysis.with_ai"
@@ -42,15 +42,7 @@ def _invoke_parallel(
     if not calls:
         return []
 
-    results: list[dict[str, Any]] = []
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as pool:
-        futures = [
-            pool.submit(runtime.invoke, capability_id, inputs)
-            for capability_id, inputs in calls
-        ]
-        for future in concurrent.futures.as_completed(futures):
-            results.append(future.result())
-    return results
+    return AgenticExecutor(runtime).invoke_parallel(calls, max_workers=max_workers)
 
 
 def _run_base_analysis(runtime: WorkflowRuntime, inputs: dict[str, Any]) -> dict[str, Any]:

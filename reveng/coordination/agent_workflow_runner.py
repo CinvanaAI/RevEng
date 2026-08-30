@@ -36,6 +36,7 @@ from typing import Any
 
 from reveng.framework.capability_proxy import CapabilityRegistryProxy
 from reveng.framework.runtime import WorkflowRuntime
+from reveng.framework.trusted_code import require_authored_code_execution_enabled
 
 
 def run_agent_workflow(
@@ -69,6 +70,7 @@ def run_agent_workflow(
         If the workflow code defines no callable run() function.
     Any exception raised by the workflow code propagates as-is.
     """
+    require_authored_code_execution_enabled("agent-authored workflow code")
     proxy = CapabilityRegistryProxy(runtime, runtime.capability_registry)
 
     namespace: dict[str, Any] = {
