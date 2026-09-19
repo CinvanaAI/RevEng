@@ -1,90 +1,40 @@
 # RevEng
 
-RevEng is a local-first Python source-comprehension and architecture-recovery system with a visual control center for running analyses, inspecting evidence, composing reusable capabilities, and governing which tools and files an agent may use.
+Inspect an unfamiliar Python repository and get source-linked structural maps, reports and explicit unknowns.
 
-The repository contains a working system—not a UI mockup. A fresh database is migrated and seeded at startup with 52 executable capabilities and three analysis workflows. Static analysis works without an API key; model-assisted narration is optional.
+## Try it
 
-## What it demonstrates
+Python 3.11+. Run from this checkout:
 
-- Multi-pass Python repository mapping: inventory, relationships, file breakdowns, clusters, flows, dossier generation, validation, and explicit unknowns.
-- An evidence-linked, heuristic meaning pipeline that derives actions, functions, file purpose and behavior, workflows, modules, subsystems, and a provisional system summary from Python syntax and call patterns.
-- A storage-backed capability platform with contracts, executable bindings, composite capabilities, draft validation, publication history, and rollback.
-- Agent-scoped capability grants checked at every runtime invocation, with keycards constraining the file inputs exposed to built-in analysis tools.
-- Durable SQLite state for agents, runs, events, outputs, capabilities, permissions, and migrations.
-- A FastAPI/Jinja control center plus an optional native desktop shell.
-
-## Architecture
-
-```mermaid
-flowchart LR
-    UI[Local web or desktop UI] --> API[FastAPI application]
-    API --> Services[Platform services]
-    Services --> DB[(SQLite)]
-    Services --> Host[Workflow host]
-    Host --> Runtime[Permission-aware runtime]
-    Runtime --> Catalog[Capability registry]
-    Catalog --> Engine[Repository analysis engine]
-    Engine --> Artifacts[JSON and text artifacts]
-    Provider[Optional model provider] --> Runtime
+```sh
+python -m pip install -e .
+python -m examples.offline_demo --out output/first-analysis
 ```
 
-The durable capability catalog is the source of truth. Runtime registries are projections of that catalog, and workflows invoke capabilities through the runtime so permission checks, logging, caching, and artifact tracking stay in one path. See [ARCHITECTURE.md](ARCHITECTURE.md) for the component boundaries.
+**Input:** Three small Python files with explicit imports and function calls.
 
-## Quick start
+**Result:** The static workflow writes a file inventory, relationship map, per-file breakdowns, dossier, validation and unknowns. It does not execute the input repository or call a model.
 
-Requirements: Python 3.11 or newer.
+See [the captured example](examples/RESULT.md) for the observed output and reproduction command.
 
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
-python server.py
-```
+## How it works
 
-Open <http://127.0.0.1:8080>. The server binds to localhost by default.
+An inspectable architecture account starts from source symbols and relationships, then carries evidence into derived reports. Explicit unknowns show where static analysis cannot resolve behavior.
 
-An editable package install (`python -m pip install -e .`) also provides the `reveng` command.
+Source: [reveng/cli.py](reveng/cli.py), [reveng/analysis_engine/workflows/repo_analysis.py](reveng/analysis_engine/workflows/repo_analysis.py), [tests/test_host_workflow.py](tests/test_host_workflow.py).
 
-For the optional desktop shell:
+## Use it for your work
 
-```powershell
-python desktop.py
-```
+Run `reveng` for the local browser interface, then choose a Python repository you want to understand. Start with the included `examples/tiny_repository`; output folders must be new. Prefer a short runtime path on Windows. See [ASSETS.md](ASSETS.md) for interface-asset provenance.
 
-No provider credentials are needed for the static workflows. To enable model-assisted analysis, copy `.env.example` to `.env` and configure an OpenAI-compatible provider.
+## Beyond the first analysis
 
-User-authored capability and agent-workflow Python is disabled by default. It runs in-process with the same operating-system access as RevEng; it is not sandboxed. After reviewing the code, an operator can explicitly enable it for that process:
+The local control center also manages reusable capabilities, composite workflows, agent permissions, run evidence and publication history. These are implemented surfaces with their own contracts; the first static analysis does not require configuring them. [ARCHITECTURE.md](ARCHITECTURE.md) maps the components and [SECURITY.md](SECURITY.md) explains the local HTTP boundary and trusted authored-code setting.
 
-```powershell
-$env:REVENG_ENABLE_AUTHORED_CODE = "1"
-python server.py
-```
+Keep the default loopback binding. Optional user-authored Python runs with the host process’s access after explicit enablement; capability keycards are not an operating-system sandbox.
 
-## Testing
+## Scope
 
-```powershell
-python -m unittest discover -s tests
-```
+Static relationships and inferred behavior are provisional. Dynamic imports/calls and framework behavior may remain unresolved. Optional model/desktop surfaces need their own configuration; the first example uses neither.
 
-The suite exercises database migrations, capability publication and rollback, permission enforcement, the web UI, host composition, static workflows, layered meaning outputs, and the recovered parallel execution adapter.
-
-## Local-data boundary
-
-RevEng is designed for local use. Its database, `.env`, generated artifacts, test workspaces, and copied agent assets are ignored by Git. The browser UI loads its application assets locally and does not depend on a third-party JavaScript CDN. Network requests occur only when a user configures and invokes a remote model provider (or follows the WebView2 installation link shown by the desktop launcher).
-
-The HTTP boundary rejects non-loopback peers, non-local Host headers, and cross-origin browser mutations. This protects the local browser surface from ordinary CSRF and DNS-rebinding requests; it is not multi-user authentication and does not defend against another process already running as the same OS user. Keep the default `127.0.0.1` binding and do not expose RevEng to a network. See [SECURITY.md](SECURITY.md) and [ASSETS.md](ASSETS.md) before publishing or redistributing the project.
-
-## Current scope
-
-- Repository analysis targets Python source code.
-- Meaning outputs are evidence-linked heuristics, not universal program semantics.
-- Keycards scope inputs passed through RevEng tools; they are not an operating-system filesystem sandbox.
-- User-authored Python is trusted code and requires the explicit `REVENG_ENABLE_AUTHORED_CODE=1` process setting.
-- Model-assisted output depends on the configured provider and is not required for core analysis.
-- Capability uninstall/deprecation and stored revision diffs are not yet exposed in the UI.
-- The desktop packaging specification is development-ready but not a signed installer pipeline.
-
-## License
-
-RevEng is available under the [MIT License](LICENSE).
+Owned code is available under the [MIT license](LICENSE).

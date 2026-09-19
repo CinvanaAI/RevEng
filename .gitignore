@@ -63,3 +63,11 @@ desktop.ini
 .claude/
 .agents/
 .codex/
+
+# Local first-use results
+output/
+.env
+__pycache__/
+*.egg-info/
+build/
+dist/
