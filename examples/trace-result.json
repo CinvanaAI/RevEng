@@ -1,0 +1,59 @@
+{
+  "synthetic_input": true,
+  "analysis": "Actual Python AST workflow; input files were not executed",
+  "file_count": 3,
+  "nodes": 6,
+  "edges": 8,
+  "calls": [
+    {
+      "from": "function:helper.py:module:describe",
+      "to": "function:formatting.py:module:label",
+      "file": "helper.py",
+      "line": 5,
+      "source": "return label(name)"
+    },
+    {
+      "from": "function:main.py:module:main",
+      "to": "function:helper.py:module:describe",
+      "file": "main.py",
+      "line": 5,
+      "source": "return describe(\"workshop\")"
+    },
+    {
+      "from": "file:main.py",
+      "to": "function:main.py:module:main",
+      "file": "main.py",
+      "line": 9,
+      "source": "print(main())"
+    }
+  ],
+  "validation": {
+    "passed": [
+      "files_accounted_for",
+      "line_ranges_valid",
+      "referenced_files_exist",
+      "relation_map_not_empty",
+      "breakdowns_align_with_inventory",
+      "flow_records_cite_actual_nodes"
+    ],
+    "errors": 0,
+    "warnings": 0
+  },
+  "unknowns": [
+    {
+      "source": "cluster_unknowns",
+      "items": [
+        "Dynamic imports are not tracked and represent connections invisible to this analysis.",
+        "Imports inside function bodies or conditional blocks are recorded but their runtime activation is unknown."
+      ]
+    },
+    {
+      "source": "flow_unknowns",
+      "items": [
+        "Calls made through stored function references, dynamic dispatch, and higher-order function targets are not tracked and represent connections invisible to this analysis.",
+        "Any call targets not resolved by static AST analysis are absent from this flow map (present in relation_map unresolved_calls)."
+      ]
+    }
+  ],
+  "model_calls": 0
+}

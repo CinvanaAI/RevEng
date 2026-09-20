@@ -15,7 +15,7 @@ python -m examples.offline_demo --out output/first-analysis
 
 **Result:** The static workflow writes a file inventory, relationship map, per-file breakdowns, dossier, validation and unknowns. It does not execute the input repository or call a model.
 
-See [the captured example](examples/RESULT.md) for the observed output and reproduction command.
+See [the captured example](examples/RESULT.md) for the observed output and reproduction command. Then follow the [source-to-result walkthrough](docs/READING-ANALYSIS.md): `main.py:5` becomes a call edge, six consistency checks pass, and four static-analysis caveats remain visible.
 
 ## How it works
 
